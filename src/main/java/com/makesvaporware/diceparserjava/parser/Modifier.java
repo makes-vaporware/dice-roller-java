@@ -10,12 +10,4 @@ public class Modifier {
         this.type = type;
         this.factor = factor;
     }
-
-    // public TokenType type() {
-    // return type;
-    // }
-
-    // public ASTNode factor() {
-    // return factor;
-    // }
 }

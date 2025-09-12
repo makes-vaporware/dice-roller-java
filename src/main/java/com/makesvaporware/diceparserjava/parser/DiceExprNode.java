@@ -38,10 +38,10 @@ public class DiceExprNode extends ASTNode {
     public EvaluationResult evaluate() throws Exception {
         // Validate dice parameters
         if (!(left instanceof IntegerLiteralNode))
-            throw new Error("Invalid dice expression: Number of dice must be a literal integer.");
+            throw new Exception("Invalid dice expression: Number of dice must be a literal integer.");
 
         if (!(right instanceof IntegerLiteralNode))
-            throw new Error("Invalid dice expression: Number of sides must be a literal integer.");
+            throw new Exception("Invalid dice expression: Number of sides must be a literal integer.");
 
         EvaluationResult leftResult = left.evaluate();
         EvaluationResult rightResult = right.evaluate();
@@ -50,11 +50,11 @@ public class DiceExprNode extends ASTNode {
         int numSides = (int) rightResult.value;
 
         if (numDice < 0)
-            throw new Error(
+            throw new Exception(
                     "Invalid dice expression: Number of dice must be a positive integer.");
 
         if (numSides <= 0)
-            throw new Error(
+            throw new Exception(
                     "Invalid dice expression: Number of sides must be a positive integer.");
 
         // Validate node modifiers before evaluating
@@ -62,14 +62,14 @@ public class DiceExprNode extends ASTNode {
 
         for (Modifier modifier : modifiers) {
             if (!(modifier.factor instanceof IntegerLiteralNode))
-                throw new Error("Invalid modifier: Modifier values must be a literal integer.");
+                throw new Exception("Invalid modifier: Modifier values must be a literal integer.");
 
             EvaluationResult modResult = modifier.factor.evaluate();
 
             int intModValue = (int) modResult.value;
 
             if (intModValue < 0)
-                throw new Error("Modifiers must be a non-negative integer.");
+                throw new Exception("Modifiers must be a non-negative integer.");
 
             validatedModifiers.add(new ValidatedModifier(modifier.type, intModValue));
         }
@@ -87,7 +87,7 @@ public class DiceExprNode extends ASTNode {
 
             // Catch infinite explosion loops
             if (diceRolled > MAX_DICE_ROLLS)
-                throw new Error("Too many dice rolled.");
+                throw new Exception("Too many dice rolled.");
 
             StringBuilder roll = new StringBuilder();
 

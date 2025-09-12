@@ -36,12 +36,12 @@ public class BinaryExprNode extends ASTNode {
                                 leftResult.displayString, rightResult.displayString));
             case DIVIDE:
                 if (rightResult.value == 0)
-                    throw new Error("Division by zero");
+                    throw new Exception("Division by zero");
                 return new EvaluationResult(leftResult.value / rightResult.value,
                         String.format("%s / %s",
                                 leftResult.displayString, rightResult.displayString));
             default:
-                throw new Error("Unknown binary operator: " + Token.typeToString(operator));
+                throw new Exception("Unknown binary operator: " + Token.typeToString(operator));
         }
 
     }

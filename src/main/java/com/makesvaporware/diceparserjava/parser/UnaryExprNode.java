@@ -26,7 +26,7 @@ public class UnaryExprNode extends ASTNode {
                 return new EvaluationResult(-1 * childResult.value,
                         String.format("-%s", childResult.displayString));
             default:
-                throw new Error("Unknown unary operator: " + Token.typeToString(operator));
+                throw new Exception("Unknown unary operator: " + Token.typeToString(operator));
         }
     }
 }

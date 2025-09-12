@@ -57,7 +57,7 @@ public class Parser {
         ASTNode ast = expression();
 
         if (!isAtEnd()) {
-            throw new Error("Unexpected token: " + peek().toString());
+            throw new Exception("Unexpected token: " + peek().toString());
         }
 
         return ast;
@@ -142,7 +142,7 @@ public class Parser {
         if (match(TokenType.LPAREN)) {
             ASTNode expr = expression();
             if (!match(TokenType.RPAREN))
-                throw new Error("Expected ')");
+                throw new Exception("Expected ')");
             return expr;
         }
 
@@ -151,7 +151,7 @@ public class Parser {
 
     private ASTNode number() throws Exception {
         if (!match(TokenType.NUMBER))
-            throw new Error("Expected a number");
+            throw new Exception("Expected a number");
 
         float value = previous().numericValue;
         int intValue = (int) value;
