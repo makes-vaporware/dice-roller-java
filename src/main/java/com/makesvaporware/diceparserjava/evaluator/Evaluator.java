@@ -9,7 +9,7 @@ public class Evaluator {
         this.root = root;
     }
 
-    public float evaluate() throws Exception {
+    public EvaluationResult evaluate() throws Exception {
         return root.evaluate();
     }
 }

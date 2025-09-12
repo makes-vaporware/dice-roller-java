@@ -1,6 +1,7 @@
 package com.makesvaporware.diceparserjava.parser;
 
+import com.makesvaporware.diceparserjava.evaluator.EvaluationResult;
+
 public abstract class ASTNode {
-    // evaluate abstract functions later.
-    abstract public float evaluate() throws Exception;
+    abstract public EvaluationResult evaluate() throws Exception;
 }

@@ -3,6 +3,7 @@ package com.makesvaporware.diceparserjava.parser;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.makesvaporware.diceparserjava.evaluator.EvaluationResult;
 import com.makesvaporware.diceparserjava.lexer.Token;
 import com.makesvaporware.diceparserjava.lexer.Token.TokenType;
 
@@ -22,7 +23,7 @@ public class DiceExprNode extends ASTNode {
         this.modifiers.add(modifier);
     }
 
-    // Helper Class
+    // Helpers
     class ValidatedModifier {
         TokenType type;
         int value;
@@ -34,30 +35,43 @@ public class DiceExprNode extends ASTNode {
     }
 
     @Override
-    public float evaluate() throws Exception {
-        float leftValue = left.evaluate();
-        float rightValue = right.evaluate();
-
+    public EvaluationResult evaluate() throws Exception {
         // Validate dice parameters
-        int numDice = (int) leftValue;
-        int numSides = (int) rightValue;
+        if (!(left instanceof IntegerLiteralNode))
+            throw new Error("Invalid dice expression: Number of dice must be a literal integer.");
 
-        if (leftValue != numDice || rightValue != numSides || numDice < 0 || numSides <= 0) {
+        if (!(right instanceof IntegerLiteralNode))
+            throw new Error("Invalid dice expression: Number of sides must be a literal integer.");
+
+        EvaluationResult leftResult = left.evaluate();
+        EvaluationResult rightResult = right.evaluate();
+
+        int numDice = (int) leftResult.value;
+        int numSides = (int) rightResult.value;
+
+        if (numDice < 0)
             throw new Error(
-                    "Invalid dice expression: Number of dice (" + leftValue + ") and sides (" + rightValue
-                            + ") must be positive integers.");
-        }
+                    "Invalid dice expression: Number of dice must be a positive integer.");
+
+        if (numSides <= 0)
+            throw new Error(
+                    "Invalid dice expression: Number of sides must be a positive integer.");
 
         // Validate node modifiers before evaluating
         List<ValidatedModifier> validatedModifiers = new ArrayList<>();
 
         for (Modifier modifier : modifiers) {
-            float modValue = modifier.getFactor().evaluate();
-            int intModValue = (int) modValue;
+            if (!(modifier.factor instanceof IntegerLiteralNode))
+                throw new Error("Invalid modifier: Modifier values must be a literal integer.");
 
-            if (modValue != intModValue || intModValue < 0)
-                throw new Error("Invalid modifier value" + modValue + ". Modifiers must be a non-negative integer.");
-            validatedModifiers.add(new ValidatedModifier(modifier.getType(), intModValue));
+            EvaluationResult modResult = modifier.factor.evaluate();
+
+            int intModValue = (int) modResult.value;
+
+            if (intModValue < 0)
+                throw new Error("Modifiers must be a non-negative integer.");
+
+            validatedModifiers.add(new ValidatedModifier(modifier.type, intModValue));
         }
 
         // Roll dice
@@ -65,32 +79,39 @@ public class DiceExprNode extends ASTNode {
         int diceToRoll = (int) numDice;
         int diceRolled = 0;
         int MAX_DICE_ROLLS = 99999;
+        List<String> rolls = new ArrayList<>();
 
         while (diceToRoll > 0) {
             diceToRoll--;
             diceRolled++;
 
             // Catch infinite explosion loops
-            if (diceRolled > MAX_DICE_ROLLS) {
+            if (diceRolled > MAX_DICE_ROLLS)
                 throw new Error("Too many dice rolled.");
-            }
+
+            StringBuilder roll = new StringBuilder();
 
             // First roll the base die
-            double rollValue = Math.floor(Math.random() * numSides) + 1;
+            int rollValue = (int) Math.floor(Math.random() * numSides) + 1;
+            roll.append(rollValue);
 
             // Then add all modifier transformations in sequence
             for (ValidatedModifier modifier : validatedModifiers) {
                 switch (modifier.type) {
                     case MINIMUM:
+                        if (rollValue < modifier.value)
+                            roll.append(" -> ").append(modifier.value);
                         rollValue = Math.max(rollValue, modifier.value);
                         break;
                     case MAXIMUM:
+                        if (rollValue > modifier.value)
+                            roll.append(" -> ").append(modifier.value);
                         rollValue = Math.min(rollValue, modifier.value);
                         break;
                     case EXPLODE:
                         if (rollValue == modifier.value) {
                             diceToRoll++;
-                            continue;
+                            roll.append("!");
                         }
                         break;
                     case KEEP_HIGHEST:
@@ -104,7 +125,22 @@ public class DiceExprNode extends ASTNode {
 
             total += rollValue;
 
+            String rollStr = roll.toString();
+            if (rollValue == 1 || rollValue == numSides) {
+                rollStr = "**" + rollStr + "**";
+            }
+            rolls.add(rollStr);
         }
-        return (float) total;
+
+        // Build display string
+        StringBuilder display = new StringBuilder();
+        display.append(numDice).append("d").append(numSides);
+
+        for (ValidatedModifier modifier : validatedModifiers) {
+            display.append(Token.typeToString(modifier.type)).append(modifier.value);
+        }
+
+        return new EvaluationResult((float) total,
+                String.format("%s (%s)", display.toString(), String.join(", ", rolls)));
     }
 }

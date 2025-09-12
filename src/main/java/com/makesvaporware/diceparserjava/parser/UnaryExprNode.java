@@ -1,5 +1,6 @@
 package com.makesvaporware.diceparserjava.parser;
 
+import com.makesvaporware.diceparserjava.evaluator.EvaluationResult;
 import com.makesvaporware.diceparserjava.lexer.Token;
 import com.makesvaporware.diceparserjava.lexer.Token.TokenType;
 
@@ -13,14 +14,17 @@ public class UnaryExprNode extends ASTNode {
     }
 
     @Override
-    public float evaluate() throws Exception {
-        float childValue = child.evaluate();
+    public EvaluationResult evaluate() throws Exception {
+        EvaluationResult childResult = child.evaluate();
 
         switch (operator) {
             case PLUS:
-                return childValue;
+                return new EvaluationResult(childResult.value,
+                        String.format("+%s", childResult.displayString));
+
             case MINUS:
-                return -1 * childValue;
+                return new EvaluationResult(-1 * childResult.value,
+                        String.format("-%s", childResult.displayString));
             default:
                 throw new Error("Unknown unary operator: " + Token.typeToString(operator));
         }

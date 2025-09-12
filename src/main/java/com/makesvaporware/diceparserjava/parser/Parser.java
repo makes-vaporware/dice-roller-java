@@ -81,10 +81,12 @@ public class Parser {
                     | "e" factor 
                     | "kh" factor
                     | "kl" factor
-        factor      := NumberLiteral
+        factor      := number
                     | "+" factor
                     | "-" factor
                     | "(" expression ")"
+        number      := IntegerLiteral
+                    | FloatLiteral
     */
     // @formatter:on
 
@@ -151,6 +153,12 @@ public class Parser {
         if (!match(TokenType.NUMBER))
             throw new Error("Expected a number");
 
-        return new NumberLiteralNode(previous().numericValue);
+        float value = previous().numericValue;
+        int intValue = (int) value;
+
+        if (value == intValue)
+            return new IntegerLiteralNode(intValue);
+
+        return new FloatLiteralNode(value);
     }
 }

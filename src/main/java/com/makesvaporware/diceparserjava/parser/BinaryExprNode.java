@@ -1,5 +1,6 @@
 package com.makesvaporware.diceparserjava.parser;
 
+import com.makesvaporware.diceparserjava.evaluator.EvaluationResult;
 import com.makesvaporware.diceparserjava.lexer.Token;
 import com.makesvaporware.diceparserjava.lexer.Token.TokenType;
 
@@ -15,21 +16,30 @@ public class BinaryExprNode extends ASTNode {
     }
 
     @Override
-    public float evaluate() throws Exception {
-        float leftValue = left.evaluate();
-        float rightValue = right.evaluate();
+    public EvaluationResult evaluate() throws Exception {
+        EvaluationResult leftResult = left.evaluate();
+        EvaluationResult rightResult = right.evaluate();
 
         switch (operator) {
             case PLUS:
-                return leftValue + rightValue;
+                return new EvaluationResult(leftResult.value + rightResult.value,
+                        String.format("%s + %s",
+                                leftResult.displayString, rightResult.displayString));
             case MINUS:
-                return leftValue - rightValue;
+                return new EvaluationResult(leftResult.value - rightResult.value,
+                        String.format("%s - %s",
+                                leftResult.displayString, rightResult.displayString));
             case MULTIPLY:
-                return leftValue * rightValue;
+                return new EvaluationResult(leftResult.value
+                        * rightResult.value,
+                        String.format("%s * %s",
+                                leftResult.displayString, rightResult.displayString));
             case DIVIDE:
-                if (rightValue == 0)
+                if (rightResult.value == 0)
                     throw new Error("Division by zero");
-                return leftValue / rightValue;
+                return new EvaluationResult(leftResult.value / rightResult.value,
+                        String.format("%s / %s",
+                                leftResult.displayString, rightResult.displayString));
             default:
                 throw new Error("Unknown binary operator: " + Token.typeToString(operator));
         }

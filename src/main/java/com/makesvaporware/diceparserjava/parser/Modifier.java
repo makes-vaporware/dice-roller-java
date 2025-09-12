@@ -3,19 +3,19 @@ package com.makesvaporware.diceparserjava.parser;
 import com.makesvaporware.diceparserjava.lexer.Token.TokenType;
 
 public class Modifier {
-    private TokenType type;
-    private ASTNode factor;
+    public TokenType type;
+    public ASTNode factor;
 
     public Modifier(TokenType type, ASTNode factor) {
         this.type = type;
         this.factor = factor;
     }
 
-    public TokenType getType() {
-        return type;
-    }
+    // public TokenType type() {
+    // return type;
+    // }
 
-    public ASTNode getFactor() {
-        return factor;
-    }
+    // public ASTNode factor() {
+    // return factor;
+    // }
 }
