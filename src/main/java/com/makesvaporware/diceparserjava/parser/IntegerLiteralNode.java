@@ -10,7 +10,7 @@ public class IntegerLiteralNode extends ASTNode {
     }
 
     @Override
-    public EvaluationResult evaluate() {
+    public EvaluationResult evaluate() throws Exception {
         return new EvaluationResult(value, Integer.toString(value));
     }
 }

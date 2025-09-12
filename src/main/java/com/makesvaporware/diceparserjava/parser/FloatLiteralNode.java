@@ -10,7 +10,7 @@ public class FloatLiteralNode extends ASTNode {
     }
 
     @Override
-    public EvaluationResult evaluate() {
+    public EvaluationResult evaluate() throws Exception {
         return new EvaluationResult(value, Float.toString(value));
     }
 }
