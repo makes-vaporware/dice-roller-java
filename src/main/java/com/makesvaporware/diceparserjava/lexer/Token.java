@@ -25,6 +25,11 @@ public class Token {
         KEEP_GREATER_THAN,  // k>
         KEEP_LESS_THAN,     // k<
         KEEP_LITERAL,       // k
+        DROP_HIGHEST,       // ph
+        DROP_LOWEST,        // pl
+        DROP_GREATER_THAN,  // p>
+        DROP_LESS_THAN,     // p<
+        DROP_LITERAL,       // p
 
         // Literals
         NUMBER,             // e.g 1, 2.3
@@ -86,6 +91,16 @@ public class Token {
                 return "k<";
             case KEEP_LITERAL:
                 return "k";
+            case DROP_HIGHEST:
+                return "ph";
+            case DROP_LOWEST:
+                return "pl";
+            case DROP_GREATER_THAN:
+                return "p>";
+            case DROP_LESS_THAN:
+                return "p<";
+            case DROP_LITERAL:
+                return "p";
 
             // Literals
             case NUMBER:

@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import com.makesvaporware.diceparserjava.evaluator.EvaluationResult;
@@ -100,11 +101,20 @@ public class DiceExprNode extends ASTNode {
 
         // Validate node modifiers before evaluating
         List<ValidatedModifier> validatedModifiers = new ArrayList<>();
+
+        // Keep modifier values
         int keepHighestValue = UNSET_VALUE;
         int keepLowestValue = UNSET_VALUE;
         int keepGreaterThanValue = UNSET_VALUE;
         int keepLessThanValue = UNSET_VALUE;
         Set<Integer> keepLiteralValues = new HashSet<>();
+
+        // Drop modifier values
+        int dropHighestValue = UNSET_VALUE;
+        int dropLowestValue = UNSET_VALUE;
+        int dropGreaterThanValue = UNSET_VALUE;
+        int dropLessThanValue = UNSET_VALUE;
+        Set<Integer> dropLiteralValues = new HashSet<>();
 
         for (Modifier modifier : modifiers) {
             if (!(modifier.factor instanceof IntegerLiteralNode))
@@ -139,6 +149,27 @@ public class DiceExprNode extends ASTNode {
                     break;
                 case KEEP_LITERAL:
                     keepLiteralValues.add(intModValue);
+                    break;
+                case DROP_HIGHEST:
+                    if (dropHighestValue != UNSET_VALUE)
+                        throw new Exception("Cannot have multiple ph modifiers.");
+                    dropHighestValue = intModValue;
+                    break;
+                case DROP_LOWEST:
+                    if (dropLowestValue != UNSET_VALUE)
+                        throw new Exception("Cannot have multiple pl modifiers.");
+                    dropLowestValue = intModValue;
+                    break;
+                case DROP_GREATER_THAN:
+                    if (dropGreaterThanValue == UNSET_VALUE || intModValue < dropGreaterThanValue)
+                        dropGreaterThanValue = intModValue;
+                    break;
+                case DROP_LESS_THAN:
+                    if (dropLessThanValue == UNSET_VALUE || intModValue > dropLessThanValue)
+                        dropLessThanValue = intModValue;
+                    break;
+                case DROP_LITERAL:
+                    dropLiteralValues.add(intModValue);
                     break;
                 default:
                     break;
@@ -191,6 +222,11 @@ public class DiceExprNode extends ASTNode {
                     case KEEP_GREATER_THAN:
                     case KEEP_LESS_THAN:
                     case KEEP_LITERAL:
+                    case DROP_HIGHEST:
+                    case DROP_LOWEST:
+                    case DROP_GREATER_THAN:
+                    case DROP_LESS_THAN:
+                    case DROP_LITERAL:
                         // Pass here. Section modifiers are handled at the end of rolling
                         break;
                     default:
@@ -207,6 +243,10 @@ public class DiceExprNode extends ASTNode {
         }
 
         // Apply selection modifiers at this level
+
+        // TODO: re-examine this.
+        // Naive implementation:
+        // Keep first
         if (keepHighestValue != UNSET_VALUE || keepLowestValue != UNSET_VALUE || keepGreaterThanValue != UNSET_VALUE
                 || keepLessThanValue != UNSET_VALUE || !keepLiteralValues.isEmpty()) {
             List<DieRoll> sortedRolls = new ArrayList<>(rolls);
@@ -221,8 +261,28 @@ public class DiceExprNode extends ASTNode {
                 boolean keepAsLessThan = keepLessThanValue != UNSET_VALUE && roll.value < keepLessThanValue;
                 boolean keepAsLiteral = keepLiteralValues.contains(roll.value);
 
-                if (!keepAsLowest && !keepAsHighest && !keepAsLiteral && !keepAsGreaterThan && !keepAsLessThan)
-                    sortedRolls.get(i).discard();
+                if (!keepAsHighest && !keepAsLowest && !keepAsGreaterThan && !keepAsLessThan && !keepAsLiteral)
+                    roll.discard();
+            }
+        }
+
+        // Then apply drop
+        if (dropHighestValue != UNSET_VALUE || dropLowestValue != UNSET_VALUE || dropGreaterThanValue != UNSET_VALUE
+                || dropLessThanValue != UNSET_VALUE || dropLiteralValues.isEmpty()) {
+            List<DieRoll> sortedRolls = rolls.stream().filter(r -> r.kept).collect(Collectors.toList());
+            sortedRolls.sort(Comparator.comparingInt(r -> r.value));
+
+            for (int i = 0; i < sortedRolls.size(); i++) {
+                DieRoll roll = sortedRolls.get(i);
+
+                boolean dropAsHighest = dropHighestValue != UNSET_VALUE && i >= sortedRolls.size() - dropHighestValue;
+                boolean dropAsLowest = dropLowestValue != UNSET_VALUE && i < dropLowestValue;
+                boolean dropAsGreaterThan = dropGreaterThanValue != UNSET_VALUE && roll.value > dropGreaterThanValue;
+                boolean dropAsLessThan = dropLessThanValue != UNSET_VALUE && roll.value < dropLessThanValue;
+                boolean dropAsLiteral = dropLiteralValues.contains(roll.value);
+
+                if (dropAsHighest || dropAsLowest || dropAsGreaterThan || dropAsLessThan || dropAsLiteral)
+                    roll.discard();
             }
         }
 

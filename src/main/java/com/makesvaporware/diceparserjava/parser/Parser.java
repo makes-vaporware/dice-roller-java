@@ -126,7 +126,8 @@ public class Parser {
 
             while (match(TokenType.MINIMUM, TokenType.MAXIMUM, TokenType.EXPLODE, TokenType.KEEP_HIGHEST,
                     TokenType.KEEP_LOWEST, TokenType.KEEP_GREATER_THAN, TokenType.KEEP_LESS_THAN,
-                    TokenType.KEEP_LITERAL)) {
+                    TokenType.KEEP_LITERAL, TokenType.DROP_HIGHEST, TokenType.DROP_LOWEST, TokenType.DROP_GREATER_THAN,
+                    TokenType.DROP_LESS_THAN, TokenType.DROP_LITERAL)) {
                 Token mod = previous();
                 ASTNode modFactor = factor();
                 ((DiceExprNode) node).addModifier(new Modifier(mod.type, modFactor));

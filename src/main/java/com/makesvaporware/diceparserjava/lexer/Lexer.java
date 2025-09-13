@@ -89,6 +89,21 @@ public class Lexer {
             } else if (ch == 'k') {
                 tokens.add(new Token(TokenType.KEEP_LITERAL));
                 advance();
+            } else if (ch == 'p' && peekChar(1) == 'h') {
+                tokens.add(new Token(TokenType.DROP_HIGHEST));
+                advance(2);
+            } else if (ch == 'p' && peekChar(1) == 'l') {
+                tokens.add(new Token(TokenType.DROP_LOWEST));
+                advance(2);
+            } else if (ch == 'p' && peekChar(1) == '>') {
+                tokens.add(new Token(TokenType.DROP_GREATER_THAN));
+                advance(2);
+            } else if (ch == 'p' && peekChar(1) == '<') {
+                tokens.add(new Token(TokenType.DROP_LESS_THAN));
+                advance(2);
+            } else if (ch == 'p') {
+                tokens.add(new Token(TokenType.DROP_LITERAL));
+                advance();
             } else if (Character.isDigit(ch) || (ch == '.' && Character.isDigit(peekChar(1)))) {
                 // maybe re-examine this?
                 int start = pos;
