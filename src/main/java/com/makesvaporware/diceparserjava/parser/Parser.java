@@ -153,7 +153,7 @@ public class Parser {
             ASTNode expr = expression();
             if (!match(TokenType.RPAREN))
                 throw new Exception("Expected ')");
-            return expr;
+            return new ParenthesizedExprNode(expr);
         }
 
         return number();
