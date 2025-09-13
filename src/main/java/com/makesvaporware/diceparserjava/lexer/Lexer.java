@@ -105,7 +105,7 @@ public class Lexer {
                 tokens.add(new Token(TokenType.DROP_LITERAL));
                 advance();
             } else if (Character.isDigit(ch) || (ch == '.' && Character.isDigit(peekChar(1)))) {
-                // maybe re-examine this?
+                // TODO: maybe re-examine this?
                 int start = pos;
                 boolean hasDot = false;
 

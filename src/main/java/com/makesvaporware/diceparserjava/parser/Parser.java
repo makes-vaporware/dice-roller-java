@@ -84,6 +84,11 @@ public class Parser {
                     | "k>" factor
                     | "k<" factor
                     | "k" factor
+                    | "ph" factor
+                    | "pl" factor
+                    | "p>" factor
+                    | "p<" factor
+                    | "p" factor
         factor      := number
                     | "+" factor
                     | "-" factor
