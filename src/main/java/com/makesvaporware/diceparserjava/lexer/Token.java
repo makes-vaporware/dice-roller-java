@@ -22,6 +22,7 @@ public class Token {
         EXPLODE,            // e
         KEEP_HIGHEST,       // kh
         KEEP_LOWEST,        // kl
+        KEEP_LITERAL,       // k
 
         // Literals
         NUMBER,             // e.g 1, 2.3
@@ -77,6 +78,8 @@ public class Token {
                 return "kh";
             case KEEP_LOWEST:
                 return "kl";
+            case KEEP_LITERAL:
+                return "k";
 
             // Literals
             case NUMBER:
@@ -84,8 +87,6 @@ public class Token {
 
             // End of Input
             case END:
-                return "\0";
-
             default:
                 return "\0";
         }
@@ -97,7 +98,6 @@ public class Token {
                 return Float.toString(numericValue);
             default:
                 return typeToString(type);
-
         }
     }
 }

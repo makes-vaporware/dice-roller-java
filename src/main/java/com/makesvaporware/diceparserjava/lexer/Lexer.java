@@ -80,6 +80,9 @@ public class Lexer {
             } else if (ch == 'k' && peekChar(1) == 'l') {
                 tokens.add(new Token(TokenType.KEEP_LOWEST));
                 advance(2);
+            } else if (ch == 'k') {
+                tokens.add(new Token(TokenType.KEEP_LITERAL));
+                advance();
             } else if (Character.isDigit(ch) || (ch == '.' && Character.isDigit(peekChar(1)))) {
                 // maybe re-examine this?
                 int start = pos;
@@ -105,7 +108,6 @@ public class Lexer {
                 float value = Float.parseFloat(str.substring(start, pos));
                 tokens.add(new Token(TokenType.NUMBER, value));
             } else {
-                // just crash? revisit
                 throw new Exception("Unexpected character '" + ch + "' at position " + pos);
             }
         }

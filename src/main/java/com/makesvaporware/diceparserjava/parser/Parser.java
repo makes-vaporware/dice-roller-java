@@ -81,6 +81,7 @@ public class Parser {
                     | "e" factor 
                     | "kh" factor
                     | "kl" factor
+                    | "k" factor
         factor      := number
                     | "+" factor
                     | "-" factor
@@ -122,7 +123,7 @@ public class Parser {
             node = new DiceExprNode(node, right, operator.type);
 
             while (match(TokenType.MINIMUM, TokenType.MAXIMUM, TokenType.EXPLODE, TokenType.KEEP_HIGHEST,
-                    TokenType.KEEP_LOWEST)) {
+                    TokenType.KEEP_LOWEST, TokenType.KEEP_LITERAL)) {
                 Token mod = previous();
                 ASTNode modFactor = factor();
                 ((DiceExprNode) node).addModifier(new Modifier(mod.type, modFactor));

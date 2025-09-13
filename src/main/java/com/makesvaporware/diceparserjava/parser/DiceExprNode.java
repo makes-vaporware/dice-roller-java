@@ -2,7 +2,9 @@ package com.makesvaporware.diceparserjava.parser;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.makesvaporware.diceparserjava.evaluator.EvaluationResult;
@@ -100,6 +102,7 @@ public class DiceExprNode extends ASTNode {
         List<ValidatedModifier> validatedModifiers = new ArrayList<>();
         int keepHighestValue = UNSET_VALUE;
         int keepLowestValue = UNSET_VALUE;
+        Set<Integer> keepLiteralValues = new HashSet<>();
 
         for (Modifier modifier : modifiers) {
             if (!(modifier.factor instanceof IntegerLiteralNode))
@@ -124,6 +127,9 @@ public class DiceExprNode extends ASTNode {
                         throw new Exception("Cannot have multiple kl modifiers.");
                     keepLowestValue = intModValue;
                     break;
+                case KEEP_LITERAL:
+                    keepLiteralValues.add(intModValue);
+                    break;
                 default:
                     break;
             }
@@ -135,7 +141,7 @@ public class DiceExprNode extends ASTNode {
         int total = 0;
         int diceToRoll = (int) numDice;
         int diceRolled = 0;
-        List<DieRoll> rolls2 = new ArrayList<>();
+        List<DieRoll> rolls = new ArrayList<>();
 
         while (diceToRoll > 0) {
             diceToRoll--;
@@ -145,34 +151,34 @@ public class DiceExprNode extends ASTNode {
             if (diceRolled > MAX_DICE_ROLLS)
                 throw new Exception("Too many dice rolled.");
 
-            DieRoll roll2 = new DieRoll();
+            DieRoll roll = new DieRoll();
 
             // First roll the base die
             int rollValue = (int) Math.floor(Math.random() * numSides) + 1;
-            roll2.originalValue(rollValue);
+            roll.originalValue(rollValue);
 
             // Apply per-die modifiers in sequence
             for (ValidatedModifier modifier : validatedModifiers) {
                 switch (modifier.type) {
                     case MINIMUM:
                         if (rollValue < modifier.value)
-                            // roll2.append(" -> ").append(modifier.value);
-                            roll2.transformValue(" -> ", modifier.value);
+                            roll.transformValue(" -> ", modifier.value);
                         rollValue = Math.max(rollValue, modifier.value);
                         break;
                     case MAXIMUM:
                         if (rollValue > modifier.value)
-                            roll2.transformValue(" -> ", modifier.value);
+                            roll.transformValue(" -> ", modifier.value);
                         rollValue = Math.min(rollValue, modifier.value);
                         break;
                     case EXPLODE:
                         if (rollValue == modifier.value) {
                             diceToRoll++;
-                            roll2.transform("!");
+                            roll.transform("!");
                         }
                         break;
                     case KEEP_HIGHEST:
                     case KEEP_LOWEST:
+                    case KEEP_LITERAL:
                         // Pass here. Section modifiers are handled at the end of rolling
                         break;
                     default:
@@ -180,30 +186,31 @@ public class DiceExprNode extends ASTNode {
                 }
             }
 
-            roll2.value = rollValue;
+            roll.value = rollValue;
 
-            if (roll2.value == 1 || roll2.value == numSides)
-                roll2.bold();
+            if (roll.value == 1 || roll.value == numSides)
+                roll.bold();
 
-            rolls2.add(roll2);
+            rolls.add(roll);
         }
 
         // Apply selection modifiers at this level
-        if (keepHighestValue > UNSET_VALUE || keepLowestValue > UNSET_VALUE) {
-            List<DieRoll> sortedRolls = new ArrayList<>(rolls2);
+        if (keepHighestValue > UNSET_VALUE || keepLowestValue > UNSET_VALUE || !keepLiteralValues.isEmpty()) {
+            List<DieRoll> sortedRolls = new ArrayList<>(rolls);
             sortedRolls.sort(Comparator.comparingInt(r -> r.value));
 
             for (int i = 0; i < sortedRolls.size(); i++) {
                 boolean keepAsLowest = keepLowestValue != UNSET_VALUE && i < keepLowestValue;
                 boolean keepAsHighest = keepHighestValue != UNSET_VALUE && i >= sortedRolls.size() - keepHighestValue;
+                boolean keepAsLiteral = keepLiteralValues.contains(sortedRolls.get(i).value);
 
-                if (!keepAsLowest && !keepAsHighest)
+                if (!keepAsLowest && !keepAsHighest && !keepAsLiteral)
                     sortedRolls.get(i).discard();
             }
         }
 
         // Calulate total
-        for (DieRoll roll : rolls2) {
+        for (DieRoll roll : rolls) {
             if (roll.kept)
                 total += roll.value;
             else
@@ -220,6 +227,6 @@ public class DiceExprNode extends ASTNode {
 
         return new EvaluationResult((float) total,
                 String.format("%s (%s)", display.toString(), String.join(", ",
-                        rolls2.stream().map(roll -> roll.transformations).collect(Collectors.toList()))));
+                        rolls.stream().map(roll -> roll.transformations).collect(Collectors.toList()))));
     }
 }

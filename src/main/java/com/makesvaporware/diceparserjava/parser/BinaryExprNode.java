@@ -43,6 +43,5 @@ public class BinaryExprNode extends ASTNode {
             default:
                 throw new Exception("Unknown binary operator: " + Token.typeToString(operator));
         }
-
     }
 }
