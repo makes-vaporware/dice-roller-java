@@ -2,6 +2,8 @@
 
 Java parser for standard TTRPG dice expressions (e.g. 2d6 + 1). Runs as a command line program.
 
+## Usage
+
 ```
                     ================================================================
                                             DICE ROLLER HELP
@@ -49,4 +51,7 @@ Java parser for standard TTRPG dice expressions (e.g. 2d6 + 1). Runs as a comman
                     ================================================================
 ```
 
-<img width="2359" height="493" alt="image" src="https://github.com/user-attachments/assets/413b50d3-ef51-4759-b9bb-295e3d91bdb9" />
+## Examples
+
+<img width="1390" height="510" alt="image" src="https://github.com/user-attachments/assets/0348b28f-44d4-403e-9bca-ab059d09325e" />
+
