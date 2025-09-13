@@ -54,7 +54,7 @@ public class Token {
 
     public static String typeToString(TokenType type) {
         switch (type) {
-            // Operators
+            // Arithmetic Operators
             case PLUS:
                 return "+";
             case MINUS:
