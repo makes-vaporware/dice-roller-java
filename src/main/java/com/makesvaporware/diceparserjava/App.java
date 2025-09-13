@@ -1,5 +1,6 @@
 package com.makesvaporware.diceparserjava;
 
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import com.makesvaporware.diceparserjava.evaluator.EvaluationResult;
@@ -64,7 +65,15 @@ public class App {
 
         while (true) {
             System.out.print("> ");
-            String input = scanner.nextLine().trim();
+            String input;
+
+            try {
+                input = scanner.nextLine().trim();
+            } catch (NoSuchElementException e) {
+                // Ctrl+C suppression
+                System.out.println("\nQuitting app...");
+                break;
+            }
 
             if ("quit".equalsIgnoreCase(input)) {
                 System.out.println("Quitting app...");

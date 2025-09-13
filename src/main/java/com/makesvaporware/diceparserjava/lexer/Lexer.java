@@ -25,13 +25,13 @@ public class Lexer {
     }
 
     private char currentChar() {
-        if (pos > strlen)
+        if (pos >= strlen)
             return '\0';
         return str.charAt(pos);
     }
 
     private char peekChar(int n) {
-        if (pos + n > strlen)
+        if (pos + n >= strlen)
             return '\0';
         return str.charAt(pos + n);
     }
@@ -104,32 +104,41 @@ public class Lexer {
             } else if (ch == 'p') {
                 tokens.add(new Token(TokenType.DROP_LITERAL));
                 advance();
-            } else if (Character.isDigit(ch) || (ch == '.' && Character.isDigit(peekChar(1)))) {
-                // TODO: maybe re-examine this?
+            } else if (Character.isDigit(ch) || ch == '.') {
                 int start = pos;
-                boolean hasDot = false;
+                boolean hasIntegerPart = false;
+                boolean hasDecimalPoint = false;
+                boolean hasFractionalPart = false;
 
-                if (ch == '.') {
-                    hasDot = true;
+                if (Character.isDigit(currentChar())) {
+                    hasIntegerPart = true;
+                    while (pos < strlen && Character.isDigit(currentChar()))
+                        advance();
+                }
+
+                if (currentChar() == '.') {
+                    hasDecimalPoint = true;
                     advance();
                 }
 
-                while (pos < strlen) {
-                    char ch2 = currentChar();
-                    if (ch2 == '.') {
-                        if (hasDot)
-                            break;
-                        hasDot = true;
-                    } else if (!Character.isDigit(ch2)) {
-                        break;
-                    }
-                    advance();
+                if (Character.isDigit(currentChar())) {
+                    hasFractionalPart = true;
+                    while (pos < strlen && Character.isDigit(currentChar()))
+                        advance();
                 }
 
-                float value = Float.parseFloat(str.substring(start, pos));
-                tokens.add(new Token(TokenType.NUMBER, value));
-            } else {
-                throw new Exception("Unexpected character '" + ch + "' at position " + pos);
+                if (currentChar() == '.')
+                    throw new Exception("Unexpected character '" + currentChar() + "' at position " + pos);
+
+                if (!hasIntegerPart && !hasFractionalPart)
+                    throw new Exception("Unexpected character '" + ch + "' at position " + start);
+
+                String numString = str.substring(start, pos);
+
+                if (hasDecimalPoint)
+                    tokens.add(new Token(TokenType.FLOAT_LITERAL, Float.parseFloat(numString)));
+                else
+                    tokens.add(new Token(TokenType.INTEGER_LITERAL, Float.parseFloat(numString)));
             }
         }
 

@@ -32,7 +32,8 @@ public class Token {
         DROP_LITERAL,       // p
 
         // Literals
-        NUMBER,             // e.g 1, 2.3
+        INTEGER_LITERAL,    // e.g. 1
+        FLOAT_LITERAL,      // e.g. 2.3
 
         // End of Input
         END,                // end of token stream
@@ -54,7 +55,7 @@ public class Token {
 
     public static String typeToString(TokenType type) {
         switch (type) {
-            // Arithmetic Operators
+            // Arithmetic perators
             case PLUS:
                 return "+";
             case MINUS:
@@ -103,8 +104,10 @@ public class Token {
                 return "p";
 
             // Literals
-            case NUMBER:
-                return "NaN";
+            case INTEGER_LITERAL:
+                return "INTEGER";
+            case FLOAT_LITERAL:
+                return "FLOAT";
 
             // End of Input
             case END:
@@ -115,7 +118,9 @@ public class Token {
 
     public String toString() {
         switch (type) {
-            case NUMBER:
+            case INTEGER_LITERAL:
+                return Integer.toString((int) numericValue);
+            case FLOAT_LITERAL:
                 return Float.toString(numericValue);
             default:
                 return typeToString(type);

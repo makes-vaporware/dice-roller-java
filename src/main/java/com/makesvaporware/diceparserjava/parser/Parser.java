@@ -160,15 +160,13 @@ public class Parser {
     }
 
     private ASTNode number() throws Exception {
-        if (!match(TokenType.NUMBER))
-            throw new Exception("Expected a number");
+        if (match(TokenType.INTEGER_LITERAL))
+            return new IntegerLiteralNode((int) previous().numericValue);
 
-        float value = previous().numericValue;
-        int intValue = (int) value;
+        if (match(TokenType.FLOAT_LITERAL))
+            return new FloatLiteralNode(previous().numericValue);
 
-        if (value == intValue)
-            return new IntegerLiteralNode(intValue);
+        throw new Exception("Expected a number");
 
-        return new FloatLiteralNode(value);
     }
 }
