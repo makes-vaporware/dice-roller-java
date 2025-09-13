@@ -22,6 +22,8 @@ public class Token {
         EXPLODE,            // e
         KEEP_HIGHEST,       // kh
         KEEP_LOWEST,        // kl
+        KEEP_GREATER_THAN,  // k>
+        KEEP_LESS_THAN,     // k<
         KEEP_LITERAL,       // k
 
         // Literals
@@ -78,6 +80,10 @@ public class Token {
                 return "kh";
             case KEEP_LOWEST:
                 return "kl";
+            case KEEP_GREATER_THAN:
+                return "k>";
+            case KEEP_LESS_THAN:
+                return "k<";
             case KEEP_LITERAL:
                 return "k";
 

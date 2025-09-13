@@ -102,6 +102,8 @@ public class DiceExprNode extends ASTNode {
         List<ValidatedModifier> validatedModifiers = new ArrayList<>();
         int keepHighestValue = UNSET_VALUE;
         int keepLowestValue = UNSET_VALUE;
+        int keepGreaterThanValue = UNSET_VALUE;
+        int keepLessThanValue = UNSET_VALUE;
         Set<Integer> keepLiteralValues = new HashSet<>();
 
         for (Modifier modifier : modifiers) {
@@ -115,17 +117,25 @@ public class DiceExprNode extends ASTNode {
             if (intModValue < 0)
                 throw new Exception("Modifiers must be a non-negative integer.");
 
-            // kh/kl checking
+            // Track selection-level modifiers seperately
             switch (modifier.type) {
                 case KEEP_HIGHEST:
-                    if (keepHighestValue > UNSET_VALUE)
+                    if (keepHighestValue != UNSET_VALUE)
                         throw new Exception("Cannot have multiple kh modifiers.");
                     keepHighestValue = intModValue;
                     break;
                 case KEEP_LOWEST:
-                    if (keepLowestValue > UNSET_VALUE)
+                    if (keepLowestValue != UNSET_VALUE)
                         throw new Exception("Cannot have multiple kl modifiers.");
                     keepLowestValue = intModValue;
+                    break;
+                case KEEP_GREATER_THAN:
+                    if (keepGreaterThanValue == UNSET_VALUE || intModValue < keepGreaterThanValue)
+                        keepGreaterThanValue = intModValue;
+                    break;
+                case KEEP_LESS_THAN:
+                    if (keepLessThanValue == UNSET_VALUE || intModValue > keepLessThanValue)
+                        keepLessThanValue = intModValue;
                     break;
                 case KEEP_LITERAL:
                     keepLiteralValues.add(intModValue);
@@ -178,6 +188,8 @@ public class DiceExprNode extends ASTNode {
                         break;
                     case KEEP_HIGHEST:
                     case KEEP_LOWEST:
+                    case KEEP_GREATER_THAN:
+                    case KEEP_LESS_THAN:
                     case KEEP_LITERAL:
                         // Pass here. Section modifiers are handled at the end of rolling
                         break;
@@ -195,16 +207,21 @@ public class DiceExprNode extends ASTNode {
         }
 
         // Apply selection modifiers at this level
-        if (keepHighestValue > UNSET_VALUE || keepLowestValue > UNSET_VALUE || !keepLiteralValues.isEmpty()) {
+        if (keepHighestValue != UNSET_VALUE || keepLowestValue != UNSET_VALUE || keepGreaterThanValue != UNSET_VALUE
+                || keepLessThanValue != UNSET_VALUE || !keepLiteralValues.isEmpty()) {
             List<DieRoll> sortedRolls = new ArrayList<>(rolls);
             sortedRolls.sort(Comparator.comparingInt(r -> r.value));
 
             for (int i = 0; i < sortedRolls.size(); i++) {
-                boolean keepAsLowest = keepLowestValue != UNSET_VALUE && i < keepLowestValue;
-                boolean keepAsHighest = keepHighestValue != UNSET_VALUE && i >= sortedRolls.size() - keepHighestValue;
-                boolean keepAsLiteral = keepLiteralValues.contains(sortedRolls.get(i).value);
+                DieRoll roll = sortedRolls.get(i);
 
-                if (!keepAsLowest && !keepAsHighest && !keepAsLiteral)
+                boolean keepAsHighest = keepHighestValue != UNSET_VALUE && i >= sortedRolls.size() - keepHighestValue;
+                boolean keepAsLowest = keepLowestValue != UNSET_VALUE && i < keepLowestValue;
+                boolean keepAsGreaterThan = keepGreaterThanValue != UNSET_VALUE && roll.value > keepGreaterThanValue;
+                boolean keepAsLessThan = keepLessThanValue != UNSET_VALUE && roll.value < keepLessThanValue;
+                boolean keepAsLiteral = keepLiteralValues.contains(roll.value);
+
+                if (!keepAsLowest && !keepAsHighest && !keepAsLiteral && !keepAsGreaterThan && !keepAsLessThan)
                     sortedRolls.get(i).discard();
             }
         }

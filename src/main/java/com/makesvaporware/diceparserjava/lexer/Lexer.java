@@ -80,6 +80,12 @@ public class Lexer {
             } else if (ch == 'k' && peekChar(1) == 'l') {
                 tokens.add(new Token(TokenType.KEEP_LOWEST));
                 advance(2);
+            } else if (ch == 'k' && peekChar(1) == '>') {
+                tokens.add(new Token(TokenType.KEEP_GREATER_THAN));
+                advance(2);
+            } else if (ch == 'k' && peekChar(1) == '<') {
+                tokens.add(new Token(TokenType.KEEP_LESS_THAN));
+                advance(2);
             } else if (ch == 'k') {
                 tokens.add(new Token(TokenType.KEEP_LITERAL));
                 advance();
@@ -117,5 +123,4 @@ public class Lexer {
 
         return tokens;
     }
-
 }
