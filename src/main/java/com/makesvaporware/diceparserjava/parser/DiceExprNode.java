@@ -31,9 +31,6 @@ public class DiceExprNode extends ASTNode {
     }
 
     // Helpers
-    record ValidatedModifier(TokenType type, int value) {
-    }
-
     class DieRoll {
         int value = 0;
         boolean kept = true;
@@ -75,8 +72,32 @@ public class DiceExprNode extends ASTNode {
         }
     }
 
+    record ValidatedModifier(TokenType type, int value) {
+    }
+
+    class ModifierGroup {
+        enum Type {
+            PER_DIE,
+            KEEP,
+            DROP,
+        }
+
+        Type type;
+        List<ValidatedModifier> modifiers = new ArrayList<>();
+
+        public ModifierGroup(Type type) {
+            this.type = type;
+        }
+
+        public ModifierGroup addToGroup(ValidatedModifier modifier) {
+            modifiers.add(modifier);
+            return this;
+        }
+    }
+
     @Override
     public EvaluationResult evaluate() throws Exception {
+        // TODO: aren't IntegerLiteralNode already >= 0 ?
         // Validate dice parameters
         if (!(left instanceof IntegerLiteralNode))
             throw new Exception("Invalid dice expression: Number of dice must be a literal integer.");
@@ -98,22 +119,12 @@ public class DiceExprNode extends ASTNode {
             throw new Exception(
                     "Invalid dice expression: Number of sides must be a positive integer.");
 
+        // Start building DiceExpr display string
+        StringBuilder display = new StringBuilder();
+        display.append(numDice).append("d").append(numSides);
+
         // Validate node modifiers before evaluating
-        List<ValidatedModifier> validatedModifiers = new ArrayList<>();
-
-        // Keep modifier values
-        int keepHighestValue = UNSET_VALUE;
-        int keepLowestValue = UNSET_VALUE;
-        int keepGreaterThanValue = UNSET_VALUE;
-        int keepLessThanValue = UNSET_VALUE;
-        Set<Integer> keepLiteralValues = new HashSet<>();
-
-        // Drop modifier values
-        int dropHighestValue = UNSET_VALUE;
-        int dropLowestValue = UNSET_VALUE;
-        int dropGreaterThanValue = UNSET_VALUE;
-        int dropLessThanValue = UNSET_VALUE;
-        Set<Integer> dropLiteralValues = new HashSet<>();
+        List<ModifierGroup> modifierGroups = new ArrayList<>();
 
         for (Modifier modifier : modifiers) {
             if (!(modifier.factor instanceof IntegerLiteralNode))
@@ -126,183 +137,228 @@ public class DiceExprNode extends ASTNode {
             if (intModValue < 0)
                 throw new Exception("Modifiers must be a non-negative integer.");
 
-            // Track selection-level modifiers seperately
+            ValidatedModifier validatedModifier = new ValidatedModifier(modifier.type, intModValue);
+
             switch (modifier.type) {
+                case MINIMUM:
+                case MAXIMUM:
+                case EXPLODE:
+                    modifierGroups.add(new ModifierGroup(ModifierGroup.Type.PER_DIE).addToGroup(validatedModifier));
+                    break;
                 case KEEP_HIGHEST:
-                    if (keepHighestValue != UNSET_VALUE)
-                        throw new Exception("Cannot have multiple kh modifiers.");
-                    keepHighestValue = intModValue;
-                    break;
                 case KEEP_LOWEST:
-                    if (keepLowestValue != UNSET_VALUE)
-                        throw new Exception("Cannot have multiple kl modifiers.");
-                    keepLowestValue = intModValue;
-                    break;
                 case KEEP_GREATER_THAN:
-                    if (keepGreaterThanValue == UNSET_VALUE || intModValue < keepGreaterThanValue)
-                        keepGreaterThanValue = intModValue;
-                    break;
                 case KEEP_LESS_THAN:
-                    if (keepLessThanValue == UNSET_VALUE || intModValue > keepLessThanValue)
-                        keepLessThanValue = intModValue;
-                    break;
                 case KEEP_LITERAL:
-                    keepLiteralValues.add(intModValue);
+                    if (!modifierGroups.isEmpty()
+                            && modifierGroups.get(modifierGroups.size() - 1).type == ModifierGroup.Type.KEEP)
+                        modifierGroups.get(modifierGroups.size() - 1).addToGroup(validatedModifier);
+                    else
+                        modifierGroups.add(new ModifierGroup(ModifierGroup.Type.KEEP).addToGroup(validatedModifier));
                     break;
                 case DROP_HIGHEST:
-                    if (dropHighestValue != UNSET_VALUE)
-                        throw new Exception("Cannot have multiple ph modifiers.");
-                    dropHighestValue = intModValue;
-                    break;
                 case DROP_LOWEST:
-                    if (dropLowestValue != UNSET_VALUE)
-                        throw new Exception("Cannot have multiple pl modifiers.");
-                    dropLowestValue = intModValue;
-                    break;
                 case DROP_GREATER_THAN:
-                    if (dropGreaterThanValue == UNSET_VALUE || intModValue < dropGreaterThanValue)
-                        dropGreaterThanValue = intModValue;
-                    break;
                 case DROP_LESS_THAN:
-                    if (dropLessThanValue == UNSET_VALUE || intModValue > dropLessThanValue)
-                        dropLessThanValue = intModValue;
-                    break;
                 case DROP_LITERAL:
-                    dropLiteralValues.add(intModValue);
+                    if (!modifierGroups.isEmpty()
+                            && modifierGroups.get(modifierGroups.size() - 1).type == ModifierGroup.Type.DROP)
+                        modifierGroups.get(modifierGroups.size() - 1).addToGroup(validatedModifier);
+                    else
+                        modifierGroups.add(new ModifierGroup(ModifierGroup.Type.DROP).addToGroup(validatedModifier));
                     break;
                 default:
-                    break;
+                    throw new Exception("Unknown modifier operator: " + Token.typeToString(operator));
             }
 
-            validatedModifiers.add(new ValidatedModifier(modifier.type, intModValue));
+            // Continue building DiceExpr display string here
+            display.append(Token.typeToString(modifier.type)).append(intModValue);
         }
 
-        // Roll dice
-        int total = 0;
-        int diceToRoll = (int) numDice;
-        int diceRolled = 0;
+        // Roll all base dice first
         List<DieRoll> rolls = new ArrayList<>();
-
-        while (diceToRoll > 0) {
-            diceToRoll--;
-            diceRolled++;
-
-            // Catch infinite explosion loops
-            if (diceRolled > MAX_DICE_ROLLS)
-                throw new Exception("Too many dice rolled.");
-
+        // TODO: incorporate into new DieRoll?
+        for (int i = 0; i < numDice; i++) {
             DieRoll roll = new DieRoll();
+            roll.originalValue((int) Math.floor(Math.random() * numSides) + 1);
 
-            // First roll the base die
-            int rollValue = (int) Math.floor(Math.random() * numSides) + 1;
-            roll.originalValue(rollValue);
-
-            // Apply per-die modifiers in sequence
-            for (ValidatedModifier modifier : validatedModifiers) {
-                switch (modifier.type) {
-                    case MINIMUM:
-                        if (rollValue < modifier.value)
-                            roll.transformValue(" -> ", modifier.value);
-                        rollValue = Math.max(rollValue, modifier.value);
-                        break;
-                    case MAXIMUM:
-                        if (rollValue > modifier.value)
-                            roll.transformValue(" -> ", modifier.value);
-                        rollValue = Math.min(rollValue, modifier.value);
-                        break;
-                    case EXPLODE:
-                        if (rollValue == modifier.value) {
-                            diceToRoll++;
-                            roll.transform("!");
-                        }
-                        break;
-                    case KEEP_HIGHEST:
-                    case KEEP_LOWEST:
-                    case KEEP_GREATER_THAN:
-                    case KEEP_LESS_THAN:
-                    case KEEP_LITERAL:
-                    case DROP_HIGHEST:
-                    case DROP_LOWEST:
-                    case DROP_GREATER_THAN:
-                    case DROP_LESS_THAN:
-                    case DROP_LITERAL:
-                        // Pass here. Section modifiers are handled at the end of rolling
-                        break;
-                    default:
-                        throw new Exception("Unknown modifier operator: " + Token.typeToString(operator));
-                }
-            }
-
-            roll.value = rollValue;
-
-            if (roll.value == 1 || roll.value == numSides)
-                roll.bold();
+            // only bold based on final value, so don't check it here
 
             rolls.add(roll);
         }
 
-        // Apply selection modifiers at this level
-
-        // TODO: re-examine this.
-        // Naive implementation:
-        // Keep first
-        if (keepHighestValue != UNSET_VALUE || keepLowestValue != UNSET_VALUE || keepGreaterThanValue != UNSET_VALUE
-                || keepLessThanValue != UNSET_VALUE || !keepLiteralValues.isEmpty()) {
-            List<DieRoll> sortedRolls = new ArrayList<>(rolls);
-            sortedRolls.sort(Comparator.comparingInt(r -> r.value));
-
-            for (int i = 0; i < sortedRolls.size(); i++) {
-                DieRoll roll = sortedRolls.get(i);
-
-                boolean keepAsHighest = keepHighestValue != UNSET_VALUE && i >= sortedRolls.size() - keepHighestValue;
-                boolean keepAsLowest = keepLowestValue != UNSET_VALUE && i < keepLowestValue;
-                boolean keepAsGreaterThan = keepGreaterThanValue != UNSET_VALUE && roll.value > keepGreaterThanValue;
-                boolean keepAsLessThan = keepLessThanValue != UNSET_VALUE && roll.value < keepLessThanValue;
-                boolean keepAsLiteral = keepLiteralValues.contains(roll.value);
-
-                if (!keepAsHighest && !keepAsLowest && !keepAsGreaterThan && !keepAsLessThan && !keepAsLiteral)
-                    roll.discard();
-            }
-        }
-
-        // Then apply drop
-        if (dropHighestValue != UNSET_VALUE || dropLowestValue != UNSET_VALUE || dropGreaterThanValue != UNSET_VALUE
-                || dropLessThanValue != UNSET_VALUE || dropLiteralValues.isEmpty()) {
-            List<DieRoll> sortedRolls = rolls.stream().filter(r -> r.kept).collect(Collectors.toList());
-            sortedRolls.sort(Comparator.comparingInt(r -> r.value));
-
-            for (int i = 0; i < sortedRolls.size(); i++) {
-                DieRoll roll = sortedRolls.get(i);
-
-                boolean dropAsHighest = dropHighestValue != UNSET_VALUE && i >= sortedRolls.size() - dropHighestValue;
-                boolean dropAsLowest = dropLowestValue != UNSET_VALUE && i < dropLowestValue;
-                boolean dropAsGreaterThan = dropGreaterThanValue != UNSET_VALUE && roll.value > dropGreaterThanValue;
-                boolean dropAsLessThan = dropLessThanValue != UNSET_VALUE && roll.value < dropLessThanValue;
-                boolean dropAsLiteral = dropLiteralValues.contains(roll.value);
-
-                if (dropAsHighest || dropAsLowest || dropAsGreaterThan || dropAsLessThan || dropAsLiteral)
-                    roll.discard();
+        for (ModifierGroup group : modifierGroups) {
+            // TODO: pre-filter by kept to avoid roll.kept checks? but then does that affect
+            // explode logic
+            switch (group.type) {
+                case PER_DIE:
+                    ValidatedModifier modifier = group.modifiers.get(0);
+                    switch (modifier.type) {
+                        case MINIMUM:
+                            for (DieRoll roll : rolls) {
+                                if (roll.kept && roll.value < modifier.value) {
+                                    roll.transformValue(" -> ", modifier.value);
+                                    roll.value = modifier.value;
+                                }
+                            }
+                            break;
+                        case MAXIMUM:
+                            for (DieRoll roll : rolls) {
+                                if (roll.kept && roll.value > modifier.value) {
+                                    roll.transformValue(" -> ", modifier.value);
+                                    roll.value = modifier.value;
+                                }
+                            }
+                            break;
+                        case EXPLODE:
+                            // new array to replace
+                            // TODO: more efficient to remake, or modify old in place?
+                            List<DieRoll> newRolls = new ArrayList<>();
+                            for (DieRoll roll : rolls) {
+                                newRolls.add(roll);
+                                // have to while loop here then.
+                                if (roll.kept) {
+                                    while (roll.value == modifier.value) {
+                                        roll.transform("!");
+                                        if (newRolls.size() > MAX_DICE_ROLLS)
+                                            throw new Exception("Too many dice rolled.");
+                                        roll = new DieRoll();
+                                        roll.originalValue((int) Math.floor(Math.random() * numSides) + 1);
+                                        newRolls.add(roll);
+                                    }
+                                }
+                            }
+                            rolls = newRolls;
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                case KEEP:
+                    applyKeepUnion(rolls, group.modifiers);
+                    break;
+                case DROP:
+                    applyDropUnion(rolls, group.modifiers);
+                    break;
+                default:
+                    break;
             }
         }
 
         // Calulate total
+        int total = 0;
         for (DieRoll roll : rolls) {
+            if (roll.value == 1 || roll.value == numSides)
+                roll.bold();
+
             if (roll.kept)
                 total += roll.value;
             else
                 roll.strikethrough();
         }
 
-        // Build display string
-        StringBuilder display = new StringBuilder();
-        display.append(numDice).append("d").append(numSides);
-
-        for (ValidatedModifier modifier : validatedModifiers) {
-            display.append(Token.typeToString(modifier.type)).append(modifier.value);
-        }
-
         return new EvaluationResult((float) total,
                 String.format("%s (%s)", display.toString(), String.join(", ",
                         rolls.stream().map(roll -> roll.transformations).collect(Collectors.toList()))));
+    }
+
+    private void applyKeepUnion(List<DieRoll> rolls, List<ValidatedModifier> modifiers) {
+        int keepHighestValue = UNSET_VALUE;
+        int keepLowestValue = UNSET_VALUE;
+        int keepGreaterThanValue = UNSET_VALUE;
+        int keepLessThanValue = UNSET_VALUE;
+        Set<Integer> keepLiteralValues = new HashSet<>();
+
+        for (ValidatedModifier modifier : modifiers) {
+            switch (modifier.type) {
+                case KEEP_HIGHEST:
+                    if (keepHighestValue == UNSET_VALUE || modifier.value > keepHighestValue)
+                        keepHighestValue = modifier.value;
+                    break;
+                case KEEP_LOWEST:
+                    if (keepLowestValue == UNSET_VALUE || modifier.value > keepLowestValue)
+                        keepLowestValue = modifier.value;
+                    break;
+                case KEEP_GREATER_THAN:
+                    if (keepGreaterThanValue == UNSET_VALUE || modifier.value < keepGreaterThanValue)
+                        keepGreaterThanValue = modifier.value;
+                    break;
+                case KEEP_LESS_THAN:
+                    if (keepLessThanValue == UNSET_VALUE || modifier.value > keepLessThanValue)
+                        keepLessThanValue = modifier.value;
+                    break;
+                case KEEP_LITERAL:
+                    keepLiteralValues.add(modifier.value);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        List<DieRoll> sortedRolls = rolls.stream().filter(r -> r.kept).collect(Collectors.toList());
+        sortedRolls.sort(Comparator.comparingInt(r -> r.value));
+
+        for (int i = 0; i < sortedRolls.size(); i++) {
+            DieRoll roll = sortedRolls.get(i);
+
+            boolean keepAsHighest = keepHighestValue != UNSET_VALUE && i >= sortedRolls.size() - keepHighestValue;
+            boolean keepAsLowest = keepLowestValue != UNSET_VALUE && i < keepLowestValue;
+            boolean keepAsGreaterThan = keepGreaterThanValue != UNSET_VALUE && roll.value > keepGreaterThanValue;
+            boolean keepAsLessThan = keepLessThanValue != UNSET_VALUE && roll.value < keepLessThanValue;
+            boolean keepAsLiteral = keepLiteralValues.contains(roll.value);
+
+            if (!keepAsHighest && !keepAsLowest && !keepAsGreaterThan && !keepAsLessThan && !keepAsLiteral)
+                roll.discard();
+        }
+    }
+
+    private void applyDropUnion(List<DieRoll> rolls, List<ValidatedModifier> modifiers) {
+        int dropHighestValue = UNSET_VALUE;
+        int dropLowestValue = UNSET_VALUE;
+        int dropGreaterThanValue = UNSET_VALUE;
+        int dropLessThanValue = UNSET_VALUE;
+        Set<Integer> dropLiteralValues = new HashSet<>();
+
+        for (ValidatedModifier modifier : modifiers) {
+            switch (modifier.type) {
+                case DROP_HIGHEST:
+                    if (dropHighestValue == UNSET_VALUE || modifier.value > dropHighestValue)
+                        dropHighestValue = modifier.value;
+                    break;
+                case DROP_LOWEST:
+                    if (dropLowestValue == UNSET_VALUE || modifier.value > dropLowestValue)
+                        dropLowestValue = modifier.value;
+                    break;
+                case DROP_GREATER_THAN:
+                    if (dropGreaterThanValue == UNSET_VALUE || modifier.value < dropGreaterThanValue)
+                        dropGreaterThanValue = modifier.value;
+                    break;
+                case DROP_LESS_THAN:
+                    if (dropLessThanValue == UNSET_VALUE || modifier.value > dropLessThanValue)
+                        dropLessThanValue = modifier.value;
+                    break;
+                case DROP_LITERAL:
+                    dropLiteralValues.add(modifier.value);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        List<DieRoll> sortedRolls = rolls.stream().filter(r -> r.kept).collect(Collectors.toList());
+        sortedRolls.sort(Comparator.comparingInt(r -> r.value));
+
+        for (int i = 0; i < sortedRolls.size(); i++) {
+            DieRoll roll = sortedRolls.get(i);
+
+            boolean dropAsHighest = dropHighestValue != UNSET_VALUE && i >= sortedRolls.size() - dropHighestValue;
+            boolean dropAsLowest = dropLowestValue != UNSET_VALUE && i < dropLowestValue;
+            boolean dropAsGreaterThan = dropGreaterThanValue != UNSET_VALUE && roll.value > dropGreaterThanValue;
+            boolean dropAsLessThan = dropLessThanValue != UNSET_VALUE && roll.value < dropLessThanValue;
+            boolean dropAsLiteral = dropLiteralValues.contains(roll.value);
+
+            if (dropAsHighest || dropAsLowest || dropAsGreaterThan || dropAsLessThan || dropAsLiteral)
+                roll.discard();
+        }
     }
 }
