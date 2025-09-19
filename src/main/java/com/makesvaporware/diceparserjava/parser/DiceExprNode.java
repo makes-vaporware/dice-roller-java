@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import com.makesvaporware.diceparserjava.evaluator.EvaluationResult;
@@ -35,6 +36,10 @@ public class DiceExprNode extends ASTNode {
         int value = 0;
         boolean kept = true;
         StringBuilder transformations = new StringBuilder();
+
+        public DieRoll(int numSides) {
+            this.originalValue(ThreadLocalRandom.current().nextInt(1, numSides + 1));
+        }
 
         public DieRoll originalValue(int value) {
             this.value = value;
@@ -97,7 +102,6 @@ public class DiceExprNode extends ASTNode {
 
     @Override
     public EvaluationResult evaluate() throws Exception {
-        // TODO: aren't IntegerLiteralNode already >= 0 ?
         // Validate dice parameters
         if (!(left instanceof IntegerLiteralNode))
             throw new Exception("Invalid dice expression: Number of dice must be a literal integer.");
@@ -111,19 +115,16 @@ public class DiceExprNode extends ASTNode {
         int numDice = (int) leftResult.value;
         int numSides = (int) rightResult.value;
 
-        if (numDice < 0)
+        if (numSides == 0)
             throw new Exception(
-                    "Invalid dice expression: Number of dice must be a positive integer.");
-
-        if (numSides <= 0)
-            throw new Exception(
-                    "Invalid dice expression: Number of sides must be a positive integer.");
+                    "Invalid dice expression: Cannot roll a 0-sided die.");
 
         // Start building DiceExpr display string
         StringBuilder display = new StringBuilder();
         display.append(numDice).append("d").append(numSides);
 
         // Validate node modifiers before evaluating
+        // Group together consecutive `k` and `p` to be evaluated as a union set
         List<ModifierGroup> modifierGroups = new ArrayList<>();
 
         for (Modifier modifier : modifiers) {
@@ -131,11 +132,7 @@ public class DiceExprNode extends ASTNode {
                 throw new Exception("Invalid modifier: Modifier values must be a literal integer.");
 
             EvaluationResult modResult = modifier.factor.evaluate();
-
             int intModValue = (int) modResult.value;
-
-            if (intModValue < 0)
-                throw new Exception("Modifiers must be a non-negative integer.");
 
             ValidatedModifier validatedModifier = new ValidatedModifier(modifier.type, intModValue);
 
@@ -177,19 +174,13 @@ public class DiceExprNode extends ASTNode {
 
         // Roll all base dice first
         List<DieRoll> rolls = new ArrayList<>();
-        // TODO: incorporate into new DieRoll?
         for (int i = 0; i < numDice; i++) {
-            DieRoll roll = new DieRoll();
-            roll.originalValue((int) Math.floor(Math.random() * numSides) + 1);
-
-            // only bold based on final value, so don't check it here
-
+            DieRoll roll = new DieRoll(numSides);
             rolls.add(roll);
         }
 
+        // Evaluate modifier transformations left-to-right
         for (ModifierGroup group : modifierGroups) {
-            // TODO: pre-filter by kept to avoid roll.kept checks? but then does that affect
-            // explode logic
             switch (group.type) {
                 case PER_DIE:
                     ValidatedModifier modifier = group.modifiers.get(0);
@@ -211,19 +202,15 @@ public class DiceExprNode extends ASTNode {
                             }
                             break;
                         case EXPLODE:
-                            // new array to replace
-                            // TODO: more efficient to remake, or modify old in place?
                             List<DieRoll> newRolls = new ArrayList<>();
                             for (DieRoll roll : rolls) {
                                 newRolls.add(roll);
-                                // have to while loop here then.
                                 if (roll.kept) {
                                     while (roll.value == modifier.value) {
                                         roll.transform("!");
                                         if (newRolls.size() > MAX_DICE_ROLLS)
                                             throw new Exception("Too many dice rolled.");
-                                        roll = new DieRoll();
-                                        roll.originalValue((int) Math.floor(Math.random() * numSides) + 1);
+                                        roll = new DieRoll(numSides);
                                         newRolls.add(roll);
                                     }
                                 }
