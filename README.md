@@ -2,6 +2,10 @@
 
 Java parser for standard TTRPG dice expressions (e.g. 2d6 + 1). Runs as a command line program.
 
+### Disclaimer
+
+(Work in progress. Might not be a comprehensive dice notation parser - I am figuring out the intricacies of the language as we go)
+
 ## Usage
 
 ```
@@ -54,4 +58,3 @@ Java parser for standard TTRPG dice expressions (e.g. 2d6 + 1). Runs as a comman
 ## Examples
 
 <img width="1390" height="510" alt="image" src="https://github.com/user-attachments/assets/0348b28f-44d4-403e-9bca-ab059d09325e" />
-
