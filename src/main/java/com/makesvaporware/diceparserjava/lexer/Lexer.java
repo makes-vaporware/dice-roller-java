@@ -139,6 +139,8 @@ public class Lexer {
                     tokens.add(new Token(TokenType.FLOAT_LITERAL, Float.parseFloat(numString)));
                 else
                     tokens.add(new Token(TokenType.INTEGER_LITERAL, Float.parseFloat(numString)));
+            } else {
+                throw new Exception("Unexpected character '" + ch + "' at position " + pos);
             }
         }
 
