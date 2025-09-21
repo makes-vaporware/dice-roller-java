@@ -28,10 +28,18 @@ Based heavily off [Avrae's d20 parser](https://github.com/avrae/d20), but instea
 
                     ----------------------------------------------------------------
 
+
                     MODIFIERS:
                       mi[X]         - Minimum. Set rolls below X to X. (e.g. 2d6mi3)
                       ma[X]         - Maximum. Set rolls above X to X. (e.g. 2d6ma5)
-                      e[X]          - Explode. Roll an additional die when you match the selector. (e.g. 2d6e6)
+                      e[X]          - Explode. Roll an additional die when you
+                                      match the selector. (e.g. 2d6e6)
+                      rr[X]         - Reroll recursively. Rerolls all dice that match the
+                                      selector until the selector is no longer fulfilled. (e.g. 1d2rr2)
+                      ro[X]         - Reroll once. Rerolls all dice that match the selector
+                                      a single time. (e.g.2d2ro1)
+                      ra[X]         - Reroll and add. Rerolls up to one die that matches
+                                      the selector, then adds it to the total. (e.g. 3d2ra2)
                       k[X]          - Keep. Keeps all dice that match the selector. (e.g. 10d6k3)
                       p[X]          - Drop. Drops all dice that match the selector. (e.g. 10d6p1)
 
