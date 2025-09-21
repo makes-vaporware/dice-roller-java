@@ -2,6 +2,8 @@
 
 Java parser for standard TTRPG dice expressions (e.g. 2d6 + 1). Runs as a command line program.
 
+Based heavily off [Avrae's d20 parser](https://github.com/avrae/d20), but instead of looking at source code I am stubbornly reverse-engineering it instead
+
 ### Disclaimer
 
 (Work in progress. Might not be a comprehensive dice notation parser - I am figuring out the intricacies of the language as we go)

@@ -22,6 +22,7 @@ public class Token {
         MODIFIER_EXPLODE,       // e
         MODIFIER_REROLL,        // rr
         MODIFIER_REROLL_ONCE,   // ro
+        MODIFIER_REROLL_ADD,    // ra
         MODIFIER_KEEP,          // k
         MODIFIER_DROP,          // p
 
@@ -87,6 +88,8 @@ public class Token {
                 return "rr";
             case MODIFIER_REROLL_ONCE:
                 return "ro";
+            case MODIFIER_REROLL_ADD:
+                return "ra";
             case MODIFIER_KEEP:
                 return "k";
             case MODIFIER_DROP:

@@ -82,6 +82,7 @@ public class Parser {
                     | "e"
                     | "rr"
                     | "ro"
+                    | "ra"
                     | "k"
                     | "p"
         selector    := "h"
@@ -135,6 +136,7 @@ public class Parser {
                     TokenType.MODIFIER_EXPLODE,
                     TokenType.MODIFIER_REROLL,
                     TokenType.MODIFIER_REROLL_ONCE,
+                    TokenType.MODIFIER_REROLL_ADD,
                     TokenType.MODIFIER_KEEP,
                     TokenType.MODIFIER_DROP)) {
                 Token mod = previous();

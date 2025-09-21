@@ -136,6 +136,7 @@ public class DiceExprNode extends ASTNode {
                 case MODIFIER_EXPLODE:
                 case MODIFIER_REROLL:
                 case MODIFIER_REROLL_ONCE:
+                case MODIFIER_REROLL_ADD:
                     modifierGroups.add(new ModifierGroup(modifier.type).addToGroup(validatedModifier));
                     break;
                 case MODIFIER_KEEP:
@@ -258,6 +259,33 @@ public class DiceExprNode extends ASTNode {
 
                                 roll = new DieRoll(numSides);
                                 newRolls.add(roll);
+                            }
+                        }
+                    }
+                    rolls = newRolls;
+                }
+                    break;
+                case MODIFIER_REROLL_ADD: {
+                    ValidatedModifier modifier = group.modifiers.get(0);
+                    List<DieRoll> newRolls = new ArrayList<>();
+                    boolean isSelectorHighestLowest = modifier.selector == TokenType.SELECTOR_HIGHEST
+                            || modifier.selector == TokenType.SELECTOR_LOWEST;
+                    List<DieRoll> oldSortedKeptRolls = isSelectorHighestLowest ? sortKeptRolls(rolls) : null;
+
+                    boolean rerolled = false;
+
+                    for (DieRoll roll : rolls) {
+                        newRolls.add(roll);
+                        if (roll.kept) {
+                            if (!rerolled && shouldReroll(modifier, oldSortedKeptRolls, roll)) {
+                                roll.transform("!");
+
+                                if (newRolls.size() > MAX_DICE_ROLLS)
+                                    throw new Exception("Too many dice rolled.");
+
+                                roll = new DieRoll(numSides);
+                                newRolls.add(roll);
+                                rerolled = true;
                             }
                         }
                     }
