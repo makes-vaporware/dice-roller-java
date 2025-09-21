@@ -4,39 +4,38 @@ public class Token {
     // @formatter:off
     public enum TokenType {
         // Operators
-        PLUS,               // +
-        MINUS,              // -
-        MULTIPLY,           // *
-        DIVIDE,             // /
+        PLUS,                   // +
+        MINUS,                  // -
+        MULTIPLY,               // *
+        DIVIDE,                 // /
 
         // Parentheses
-        LPAREN,             // (
-        RPAREN,             // )
+        LPAREN,                 // (
+        RPAREN,                 // )
 
         // Dice Notation
-        DICE,               // d
+        DICE,                   // d
 
         // Modifiers
-        MINIMUM,            // mi
-        MAXIMUM,            // ma
-        EXPLODE,            // e
-        KEEP_HIGHEST,       // kh
-        KEEP_LOWEST,        // kl
-        KEEP_GREATER_THAN,  // k>
-        KEEP_LESS_THAN,     // k<
-        KEEP_LITERAL,       // k
-        DROP_HIGHEST,       // ph
-        DROP_LOWEST,        // pl
-        DROP_GREATER_THAN,  // p>
-        DROP_LESS_THAN,     // p<
-        DROP_LITERAL,       // p
+        MODIFIER_MINIMUM,       // mi
+        MODIFIER_MAXIMUM,       // ma
+        MODIFIER_EXPLODE,       // e
+        MODIFIER_KEEP,          // k
+        MODIFIER_DROP,          // p
+
+        // Selectors
+        SELECTOR_HIGHEST,       // h
+        SELECTOR_LOWEST,        // l
+        SELECTOR_GREATER_THAN,  // >
+        SELECTOR_LESS_THAN,     // <
+        SELECTOR_LITERAL,       // ("", literal)
 
         // Literals
-        INTEGER_LITERAL,    // e.g. 1
-        FLOAT_LITERAL,      // e.g. 2.3
+        INTEGER_LITERAL,        // e.g. 1
+        FLOAT_LITERAL,          // e.g. 2.3
 
         // End of Input
-        END,                // end of token stream
+        END,                    // end of token stream
     }
     // @formatter:on
 
@@ -76,32 +75,28 @@ public class Token {
                 return "d";
 
             // Modifiers
-            case MINIMUM:
+            case MODIFIER_MINIMUM:
                 return "mi";
-            case MAXIMUM:
+            case MODIFIER_MAXIMUM:
                 return "ma";
-            case EXPLODE:
+            case MODIFIER_EXPLODE:
                 return "e";
-            case KEEP_HIGHEST:
-                return "kh";
-            case KEEP_LOWEST:
-                return "kl";
-            case KEEP_GREATER_THAN:
-                return "k>";
-            case KEEP_LESS_THAN:
-                return "k<";
-            case KEEP_LITERAL:
+            case MODIFIER_KEEP:
                 return "k";
-            case DROP_HIGHEST:
-                return "ph";
-            case DROP_LOWEST:
-                return "pl";
-            case DROP_GREATER_THAN:
-                return "p>";
-            case DROP_LESS_THAN:
-                return "p<";
-            case DROP_LITERAL:
+            case MODIFIER_DROP:
                 return "p";
+
+            // Selectors
+            case SELECTOR_HIGHEST:
+                return "h";
+            case SELECTOR_LOWEST:
+                return "l";
+            case SELECTOR_GREATER_THAN:
+                return "<";
+            case SELECTOR_LESS_THAN:
+                return ">";
+            case SELECTOR_LITERAL:
+                return "";
 
             // Literals
             case INTEGER_LITERAL:

@@ -76,19 +76,17 @@ public class Parser {
                     | term "/" dice
         dice        := factor
                     | factor "d" factor modifiers*
-        modifiers   := "mi" factor
-                    | "ma" factor
-                    | "e" factor 
-                    | "kh" factor
-                    | "kl" factor
-                    | "k>" factor
-                    | "k<" factor
-                    | "k" factor
-                    | "ph" factor
-                    | "pl" factor
-                    | "p>" factor
-                    | "p<" factor
-                    | "p" factor
+        modifiers   := modifier selector factor
+        modifier    := "mi"
+                    | "ma"
+                    | "e"
+                    | "k"
+                    | "p"
+        selector    := "h"
+                    | "l"
+                    | ">"
+                    | "<"
+                    | ""
         factor      := number
                     | "+" factor
                     | "-" factor
@@ -129,13 +127,17 @@ public class Parser {
             ASTNode right = factor();
             node = new DiceExprNode(node, right, operator.type);
 
-            while (match(TokenType.MINIMUM, TokenType.MAXIMUM, TokenType.EXPLODE, TokenType.KEEP_HIGHEST,
-                    TokenType.KEEP_LOWEST, TokenType.KEEP_GREATER_THAN, TokenType.KEEP_LESS_THAN,
-                    TokenType.KEEP_LITERAL, TokenType.DROP_HIGHEST, TokenType.DROP_LOWEST, TokenType.DROP_GREATER_THAN,
-                    TokenType.DROP_LESS_THAN, TokenType.DROP_LITERAL)) {
+            while (match(TokenType.MODIFIER_MINIMUM, TokenType.MODIFIER_MAXIMUM, TokenType.MODIFIER_EXPLODE,
+                    TokenType.MODIFIER_KEEP, TokenType.MODIFIER_DROP)) {
                 Token mod = previous();
+
+                if (!match(TokenType.SELECTOR_HIGHEST, TokenType.SELECTOR_LOWEST, TokenType.SELECTOR_GREATER_THAN,
+                        TokenType.SELECTOR_LESS_THAN, TokenType.SELECTOR_LITERAL))
+                    throw new Exception("Expected selector after modifier");
+
+                Token selector = previous();
                 ASTNode modFactor = factor();
-                ((DiceExprNode) node).addModifier(new Modifier(mod.type, modFactor));
+                ((DiceExprNode) node).addModifier(new Modifier(mod.type, selector.type, modFactor));
             }
         }
 

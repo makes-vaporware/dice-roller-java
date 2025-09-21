@@ -66,79 +66,27 @@ public class Lexer {
                 tokens.add(new Token(TokenType.DICE));
                 advance();
             } else if (ch == 'm' && peekChar(1) == 'i') {
-                tokens.add(new Token(TokenType.MINIMUM));
+                tokens.add(new Token(TokenType.MODIFIER_MINIMUM));
                 advance(2);
+                lexSelector(tokens);
             } else if (ch == 'm' && peekChar(1) == 'a') {
-                tokens.add(new Token(TokenType.MAXIMUM));
+                tokens.add(new Token(TokenType.MODIFIER_MAXIMUM));
                 advance(2);
+                lexSelector(tokens);
             } else if (ch == 'e') {
-                tokens.add(new Token(TokenType.EXPLODE));
+                tokens.add(new Token(TokenType.MODIFIER_EXPLODE));
                 advance();
-            } else if (ch == 'k' && peekChar(1) == 'h') {
-                tokens.add(new Token(TokenType.KEEP_HIGHEST));
-                advance(2);
-            } else if (ch == 'k' && peekChar(1) == 'l') {
-                tokens.add(new Token(TokenType.KEEP_LOWEST));
-                advance(2);
-            } else if (ch == 'k' && peekChar(1) == '>') {
-                tokens.add(new Token(TokenType.KEEP_GREATER_THAN));
-                advance(2);
-            } else if (ch == 'k' && peekChar(1) == '<') {
-                tokens.add(new Token(TokenType.KEEP_LESS_THAN));
-                advance(2);
+                lexSelector(tokens);
             } else if (ch == 'k') {
-                tokens.add(new Token(TokenType.KEEP_LITERAL));
+                tokens.add(new Token(TokenType.MODIFIER_KEEP));
                 advance();
-            } else if (ch == 'p' && peekChar(1) == 'h') {
-                tokens.add(new Token(TokenType.DROP_HIGHEST));
-                advance(2);
-            } else if (ch == 'p' && peekChar(1) == 'l') {
-                tokens.add(new Token(TokenType.DROP_LOWEST));
-                advance(2);
-            } else if (ch == 'p' && peekChar(1) == '>') {
-                tokens.add(new Token(TokenType.DROP_GREATER_THAN));
-                advance(2);
-            } else if (ch == 'p' && peekChar(1) == '<') {
-                tokens.add(new Token(TokenType.DROP_LESS_THAN));
-                advance(2);
+                lexSelector(tokens);
             } else if (ch == 'p') {
-                tokens.add(new Token(TokenType.DROP_LITERAL));
+                tokens.add(new Token(TokenType.MODIFIER_DROP));
                 advance();
+                lexSelector(tokens);
             } else if (Character.isDigit(ch) || ch == '.') {
-                int start = pos;
-                boolean hasIntegerPart = false;
-                boolean hasDecimalPoint = false;
-                boolean hasFractionalPart = false;
-
-                if (Character.isDigit(currentChar())) {
-                    hasIntegerPart = true;
-                    while (pos < strlen && Character.isDigit(currentChar()))
-                        advance();
-                }
-
-                if (currentChar() == '.') {
-                    hasDecimalPoint = true;
-                    advance();
-                }
-
-                if (Character.isDigit(currentChar())) {
-                    hasFractionalPart = true;
-                    while (pos < strlen && Character.isDigit(currentChar()))
-                        advance();
-                }
-
-                if (currentChar() == '.')
-                    throw new Exception("Unexpected character '" + currentChar() + "' at position " + pos);
-
-                if (!hasIntegerPart && !hasFractionalPart)
-                    throw new Exception("Unexpected character '" + ch + "' at position " + start);
-
-                String numString = str.substring(start, pos);
-
-                if (hasDecimalPoint)
-                    tokens.add(new Token(TokenType.FLOAT_LITERAL, Float.parseFloat(numString)));
-                else
-                    tokens.add(new Token(TokenType.INTEGER_LITERAL, Float.parseFloat(numString)));
+                lexNumber(tokens);
             } else {
                 throw new Exception("Unexpected character '" + ch + "' at position " + pos);
             }
@@ -148,5 +96,63 @@ public class Lexer {
         tokens.add(new Token(TokenType.END));
 
         return tokens;
+    }
+
+    private void lexSelector(List<Token> tokens) {
+        char ch = currentChar();
+
+        if (ch == 'h') {
+            tokens.add(new Token(TokenType.SELECTOR_HIGHEST));
+            advance();
+        } else if (ch == 'l') {
+            tokens.add(new Token(TokenType.SELECTOR_LOWEST));
+            advance();
+        } else if (ch == '>') {
+            tokens.add(new Token(TokenType.SELECTOR_GREATER_THAN));
+            advance();
+        } else if (ch == '<') {
+            tokens.add(new Token(TokenType.SELECTOR_LESS_THAN));
+            advance();
+        } else {
+            tokens.add(new Token(TokenType.SELECTOR_LITERAL));
+        }
+    }
+
+    private void lexNumber(List<Token> tokens) throws Exception {
+        char ch = currentChar();
+        int start = pos;
+        boolean hasIntegerPart = false;
+        boolean hasDecimalPoint = false;
+        boolean hasFractionalPart = false;
+
+        if (Character.isDigit(currentChar())) {
+            hasIntegerPart = true;
+            while (pos < strlen && Character.isDigit(currentChar()))
+                advance();
+        }
+
+        if (currentChar() == '.') {
+            hasDecimalPoint = true;
+            advance();
+        }
+
+        if (Character.isDigit(currentChar())) {
+            hasFractionalPart = true;
+            while (pos < strlen && Character.isDigit(currentChar()))
+                advance();
+        }
+
+        if (currentChar() == '.')
+            throw new Exception("Unexpected character '" + currentChar() + "' at position " + pos);
+
+        if (!hasIntegerPart && !hasFractionalPart)
+            throw new Exception("Unexpected character '" + ch + "' at position " + start);
+
+        String numString = str.substring(start, pos);
+
+        if (hasDecimalPoint)
+            tokens.add(new Token(TokenType.FLOAT_LITERAL, Float.parseFloat(numString)));
+        else
+            tokens.add(new Token(TokenType.INTEGER_LITERAL, Float.parseFloat(numString)));
     }
 }

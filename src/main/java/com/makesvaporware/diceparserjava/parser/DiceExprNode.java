@@ -77,20 +77,14 @@ public class DiceExprNode extends ASTNode {
         }
     }
 
-    record ValidatedModifier(TokenType type, int value) {
+    record ValidatedModifier(TokenType type, TokenType selector, int value) {
     }
 
     class ModifierGroup {
-        enum Type {
-            PER_DIE,
-            KEEP,
-            DROP,
-        }
-
-        Type type;
+        TokenType type;
         List<ValidatedModifier> modifiers = new ArrayList<>();
 
-        public ModifierGroup(Type type) {
+        public ModifierGroup(TokenType type) {
             this.type = type;
         }
 
@@ -134,42 +128,36 @@ public class DiceExprNode extends ASTNode {
             EvaluationResult modResult = modifier.factor.evaluate();
             int intModValue = (int) modResult.value;
 
-            ValidatedModifier validatedModifier = new ValidatedModifier(modifier.type, intModValue);
+            ValidatedModifier validatedModifier = new ValidatedModifier(modifier.type, modifier.selector, intModValue);
 
             switch (modifier.type) {
-                case MINIMUM:
-                case MAXIMUM:
-                case EXPLODE:
-                    modifierGroups.add(new ModifierGroup(ModifierGroup.Type.PER_DIE).addToGroup(validatedModifier));
+                case MODIFIER_MINIMUM:
+                case MODIFIER_MAXIMUM:
+                case MODIFIER_EXPLODE:
+                    modifierGroups.add(new ModifierGroup(modifier.type).addToGroup(validatedModifier));
                     break;
-                case KEEP_HIGHEST:
-                case KEEP_LOWEST:
-                case KEEP_GREATER_THAN:
-                case KEEP_LESS_THAN:
-                case KEEP_LITERAL:
+                case MODIFIER_KEEP:
                     if (!modifierGroups.isEmpty()
-                            && modifierGroups.get(modifierGroups.size() - 1).type == ModifierGroup.Type.KEEP)
+                            && modifierGroups.get(modifierGroups.size() - 1).type == TokenType.MODIFIER_KEEP)
                         modifierGroups.get(modifierGroups.size() - 1).addToGroup(validatedModifier);
                     else
-                        modifierGroups.add(new ModifierGroup(ModifierGroup.Type.KEEP).addToGroup(validatedModifier));
+                        modifierGroups.add(new ModifierGroup(modifier.type).addToGroup(validatedModifier));
                     break;
-                case DROP_HIGHEST:
-                case DROP_LOWEST:
-                case DROP_GREATER_THAN:
-                case DROP_LESS_THAN:
-                case DROP_LITERAL:
+                case MODIFIER_DROP:
                     if (!modifierGroups.isEmpty()
-                            && modifierGroups.get(modifierGroups.size() - 1).type == ModifierGroup.Type.DROP)
+                            && modifierGroups.get(modifierGroups.size() - 1).type == TokenType.MODIFIER_DROP)
                         modifierGroups.get(modifierGroups.size() - 1).addToGroup(validatedModifier);
                     else
-                        modifierGroups.add(new ModifierGroup(ModifierGroup.Type.DROP).addToGroup(validatedModifier));
+                        modifierGroups.add(new ModifierGroup(modifier.type).addToGroup(validatedModifier));
                     break;
                 default:
                     throw new Exception("Unknown modifier operator: " + Token.typeToString(operator));
             }
 
             // Continue building DiceExpr display string here
-            display.append(Token.typeToString(modifier.type)).append(intModValue);
+            display.append(Token.typeToString(modifier.type))
+                    .append(Token.typeToString(modifier.selector))
+                    .append(intModValue);
         }
 
         // Roll all base dice first
@@ -182,49 +170,57 @@ public class DiceExprNode extends ASTNode {
         // Evaluate modifier transformations left-to-right
         for (ModifierGroup group : modifierGroups) {
             switch (group.type) {
-                case PER_DIE:
+                case MODIFIER_MINIMUM: {
                     ValidatedModifier modifier = group.modifiers.get(0);
-                    switch (modifier.type) {
-                        case MINIMUM:
-                            for (DieRoll roll : rolls) {
-                                if (roll.kept && roll.value < modifier.value) {
-                                    roll.transformValue(" -> ", modifier.value);
-                                    roll.value = modifier.value;
-                                }
-                            }
-                            break;
-                        case MAXIMUM:
-                            for (DieRoll roll : rolls) {
-                                if (roll.kept && roll.value > modifier.value) {
-                                    roll.transformValue(" -> ", modifier.value);
-                                    roll.value = modifier.value;
-                                }
-                            }
-                            break;
-                        case EXPLODE:
-                            List<DieRoll> newRolls = new ArrayList<>();
-                            for (DieRoll roll : rolls) {
-                                newRolls.add(roll);
-                                if (roll.kept) {
-                                    while (roll.value == modifier.value) {
-                                        roll.transform("!");
-                                        if (newRolls.size() > MAX_DICE_ROLLS)
-                                            throw new Exception("Too many dice rolled.");
-                                        roll = new DieRoll(numSides);
-                                        newRolls.add(roll);
-                                    }
-                                }
-                            }
-                            rolls = newRolls;
-                            break;
-                        default:
-                            break;
+                    if (modifier.selector != TokenType.SELECTOR_LITERAL)
+                        throw new Exception("MINIMUM modifier can only use literal selector.");
+                    for (DieRoll roll : rolls) {
+                        if (roll.kept && roll.value < modifier.value)
+                            roll.transformValue(" -> ", modifier.value);
                     }
+                }
                     break;
-                case KEEP:
+                case MODIFIER_MAXIMUM: {
+                    ValidatedModifier modifier = group.modifiers.get(0);
+                    if (modifier.selector != TokenType.SELECTOR_LITERAL)
+                        throw new Exception("MAXIMUM modifier can only use literal selector.");
+                    for (DieRoll roll : rolls) {
+                        if (roll.kept && roll.value > modifier.value)
+                            roll.transformValue(" -> ", modifier.value);
+                    }
+                }
+                    break;
+                case MODIFIER_EXPLODE: {
+                    ValidatedModifier modifier = group.modifiers.get(0);
+                    List<DieRoll> newRolls = new ArrayList<>();
+                    boolean explodeOnce = modifier.selector == TokenType.SELECTOR_HIGHEST
+                            || modifier.selector == TokenType.SELECTOR_LOWEST;
+                    List<DieRoll> oldSortedKeptRolls = explodeOnce ? sortKeptRolls(rolls) : null;
+
+                    for (DieRoll roll : rolls) {
+                        newRolls.add(roll);
+                        if (roll.kept) {
+                            while (shouldExplode(modifier, oldSortedKeptRolls, roll)) {
+                                roll.transform("!");
+
+                                if (newRolls.size() > MAX_DICE_ROLLS)
+                                    throw new Exception("Too many dice rolled.");
+
+                                roll = new DieRoll(numSides);
+                                newRolls.add(roll);
+
+                                if (explodeOnce)
+                                    break;
+                            }
+                        }
+                    }
+                    rolls = newRolls;
+                }
+                    break;
+                case MODIFIER_KEEP:
                     applyKeepUnion(rolls, group.modifiers);
                     break;
-                case DROP:
+                case MODIFIER_DROP:
                     applyDropUnion(rolls, group.modifiers);
                     break;
                 default:
@@ -232,7 +228,7 @@ public class DiceExprNode extends ASTNode {
             }
         }
 
-        // Calulate total
+        // Calculate total
         int total = 0;
         for (DieRoll roll : rolls) {
             if (roll.value == 1 || roll.value == numSides)
@@ -249,6 +245,30 @@ public class DiceExprNode extends ASTNode {
                         rolls.stream().map(roll -> roll.transformations).collect(Collectors.toList()))));
     }
 
+    private List<DieRoll> sortKeptRolls(List<DieRoll> rolls) {
+        return rolls.stream()
+                .filter(r -> r.kept)
+                .sorted(Comparator.comparingInt(r -> r.value))
+                .collect(Collectors.toList());
+    }
+
+    private boolean shouldExplode(ValidatedModifier modifier, List<DieRoll> sortedRolls, DieRoll roll) {
+        switch (modifier.selector) {
+            case SELECTOR_HIGHEST:
+                return sortedRolls.indexOf(roll) >= sortedRolls.size() - modifier.value;
+            case SELECTOR_LOWEST:
+                return sortedRolls.indexOf(roll) < modifier.value;
+            case SELECTOR_GREATER_THAN:
+                return roll.value > modifier.value;
+            case SELECTOR_LESS_THAN:
+                return roll.value < modifier.value;
+            case SELECTOR_LITERAL:
+                return roll.value == modifier.value;
+            default:
+                return false;
+        }
+    }
+
     private void applyKeepUnion(List<DieRoll> rolls, List<ValidatedModifier> modifiers) {
         int keepHighestValue = UNSET_VALUE;
         int keepLowestValue = UNSET_VALUE;
@@ -257,24 +277,24 @@ public class DiceExprNode extends ASTNode {
         Set<Integer> keepLiteralValues = new HashSet<>();
 
         for (ValidatedModifier modifier : modifiers) {
-            switch (modifier.type) {
-                case KEEP_HIGHEST:
+            switch (modifier.selector) {
+                case SELECTOR_HIGHEST:
                     if (keepHighestValue == UNSET_VALUE || modifier.value > keepHighestValue)
                         keepHighestValue = modifier.value;
                     break;
-                case KEEP_LOWEST:
+                case SELECTOR_LOWEST:
                     if (keepLowestValue == UNSET_VALUE || modifier.value > keepLowestValue)
                         keepLowestValue = modifier.value;
                     break;
-                case KEEP_GREATER_THAN:
+                case SELECTOR_GREATER_THAN:
                     if (keepGreaterThanValue == UNSET_VALUE || modifier.value < keepGreaterThanValue)
                         keepGreaterThanValue = modifier.value;
                     break;
-                case KEEP_LESS_THAN:
+                case SELECTOR_LESS_THAN:
                     if (keepLessThanValue == UNSET_VALUE || modifier.value > keepLessThanValue)
                         keepLessThanValue = modifier.value;
                     break;
-                case KEEP_LITERAL:
+                case SELECTOR_LITERAL:
                     keepLiteralValues.add(modifier.value);
                     break;
                 default:
@@ -282,8 +302,7 @@ public class DiceExprNode extends ASTNode {
             }
         }
 
-        List<DieRoll> sortedRolls = rolls.stream().filter(r -> r.kept).collect(Collectors.toList());
-        sortedRolls.sort(Comparator.comparingInt(r -> r.value));
+        List<DieRoll> sortedRolls = sortKeptRolls(rolls);
 
         for (int i = 0; i < sortedRolls.size(); i++) {
             DieRoll roll = sortedRolls.get(i);
@@ -307,24 +326,24 @@ public class DiceExprNode extends ASTNode {
         Set<Integer> dropLiteralValues = new HashSet<>();
 
         for (ValidatedModifier modifier : modifiers) {
-            switch (modifier.type) {
-                case DROP_HIGHEST:
+            switch (modifier.selector) {
+                case SELECTOR_HIGHEST:
                     if (dropHighestValue == UNSET_VALUE || modifier.value > dropHighestValue)
                         dropHighestValue = modifier.value;
                     break;
-                case DROP_LOWEST:
+                case SELECTOR_LOWEST:
                     if (dropLowestValue == UNSET_VALUE || modifier.value > dropLowestValue)
                         dropLowestValue = modifier.value;
                     break;
-                case DROP_GREATER_THAN:
+                case SELECTOR_GREATER_THAN:
                     if (dropGreaterThanValue == UNSET_VALUE || modifier.value < dropGreaterThanValue)
                         dropGreaterThanValue = modifier.value;
                     break;
-                case DROP_LESS_THAN:
+                case SELECTOR_LESS_THAN:
                     if (dropLessThanValue == UNSET_VALUE || modifier.value > dropLessThanValue)
                         dropLessThanValue = modifier.value;
                     break;
-                case DROP_LITERAL:
+                case SELECTOR_LITERAL:
                     dropLiteralValues.add(modifier.value);
                     break;
                 default:
@@ -332,8 +351,7 @@ public class DiceExprNode extends ASTNode {
             }
         }
 
-        List<DieRoll> sortedRolls = rolls.stream().filter(r -> r.kept).collect(Collectors.toList());
-        sortedRolls.sort(Comparator.comparingInt(r -> r.value));
+        List<DieRoll> sortedRolls = sortKeptRolls(rolls);
 
         for (int i = 0; i < sortedRolls.size(); i++) {
             DieRoll roll = sortedRolls.get(i);
