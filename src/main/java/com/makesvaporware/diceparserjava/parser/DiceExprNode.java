@@ -134,6 +134,8 @@ public class DiceExprNode extends ASTNode {
                 case MODIFIER_MINIMUM:
                 case MODIFIER_MAXIMUM:
                 case MODIFIER_EXPLODE:
+                case MODIFIER_REROLL:
+                case MODIFIER_REROLL_ONCE:
                     modifierGroups.add(new ModifierGroup(modifier.type).addToGroup(validatedModifier));
                     break;
                 case MODIFIER_KEEP:
@@ -217,6 +219,51 @@ public class DiceExprNode extends ASTNode {
                     rolls = newRolls;
                 }
                     break;
+                case MODIFIER_REROLL: {
+                    ValidatedModifier modifier = group.modifiers.get(0);
+                    List<DieRoll> newRolls = new ArrayList<>();
+
+                    for (DieRoll roll : rolls) {
+                        newRolls.add(roll);
+                        if (roll.kept) {
+                            while (shouldReroll(modifier, null, roll)) {
+                                roll.discard();
+
+                                if (newRolls.size() > MAX_DICE_ROLLS)
+                                    throw new Exception("Too many dice rolled.");
+
+                                roll = new DieRoll(numSides);
+                                newRolls.add(roll);
+                            }
+                        }
+                    }
+                    rolls = newRolls;
+                }
+                    break;
+                case MODIFIER_REROLL_ONCE: {
+                    ValidatedModifier modifier = group.modifiers.get(0);
+                    List<DieRoll> newRolls = new ArrayList<>();
+                    boolean isSelectorHighestLowest = modifier.selector == TokenType.SELECTOR_HIGHEST
+                            || modifier.selector == TokenType.SELECTOR_LOWEST;
+                    List<DieRoll> oldSortedKeptRolls = isSelectorHighestLowest ? sortKeptRolls(rolls) : null;
+
+                    for (DieRoll roll : rolls) {
+                        newRolls.add(roll);
+                        if (roll.kept) {
+                            while (shouldReroll(modifier, oldSortedKeptRolls, roll)) {
+                                roll.discard();
+
+                                if (newRolls.size() > MAX_DICE_ROLLS)
+                                    throw new Exception("Too many dice rolled.");
+
+                                roll = new DieRoll(numSides);
+                                newRolls.add(roll);
+                            }
+                        }
+                    }
+                    rolls = newRolls;
+                }
+                    break;
                 case MODIFIER_KEEP:
                     applyKeepUnion(rolls, group.modifiers);
                     break;
@@ -257,6 +304,27 @@ public class DiceExprNode extends ASTNode {
             case SELECTOR_HIGHEST:
                 return sortedRolls.indexOf(roll) >= sortedRolls.size() - modifier.value;
             case SELECTOR_LOWEST:
+                return sortedRolls.indexOf(roll) < modifier.value;
+            case SELECTOR_GREATER_THAN:
+                return roll.value > modifier.value;
+            case SELECTOR_LESS_THAN:
+                return roll.value < modifier.value;
+            case SELECTOR_LITERAL:
+                return roll.value == modifier.value;
+            default:
+                return false;
+        }
+    }
+
+    private boolean shouldReroll(ValidatedModifier modifier, List<DieRoll> sortedRolls, DieRoll roll) throws Exception {
+        switch (modifier.selector) {
+            case SELECTOR_HIGHEST:
+                if (modifier.type == TokenType.MODIFIER_REROLL)
+                    throw new Exception("REROLL modifier cannot use 'h' selector.");
+                return sortedRolls.indexOf(roll) >= sortedRolls.size() - modifier.value;
+            case SELECTOR_LOWEST:
+                if (modifier.type == TokenType.MODIFIER_REROLL)
+                    throw new Exception("REROLL modifier cannot use 'l' selector.");
                 return sortedRolls.indexOf(roll) < modifier.value;
             case SELECTOR_GREATER_THAN:
                 return roll.value > modifier.value;

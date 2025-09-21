@@ -77,6 +77,14 @@ public class Lexer {
                 tokens.add(new Token(TokenType.MODIFIER_EXPLODE));
                 advance();
                 lexSelector(tokens);
+            } else if (ch == 'r' && peekChar(1) == 'r') {
+                tokens.add(new Token(TokenType.MODIFIER_REROLL));
+                advance(2);
+                lexSelector(tokens);
+            } else if (ch == 'r' && peekChar(1) == 'o') {
+                tokens.add(new Token(TokenType.MODIFIER_REROLL_ONCE));
+                advance(2);
+                lexSelector(tokens);
             } else if (ch == 'k') {
                 tokens.add(new Token(TokenType.MODIFIER_KEEP));
                 advance();

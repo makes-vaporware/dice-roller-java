@@ -80,6 +80,8 @@ public class Parser {
         modifier    := "mi"
                     | "ma"
                     | "e"
+                    | "rr"
+                    | "ro"
                     | "k"
                     | "p"
         selector    := "h"
@@ -127,12 +129,22 @@ public class Parser {
             ASTNode right = factor();
             node = new DiceExprNode(node, right, operator.type);
 
-            while (match(TokenType.MODIFIER_MINIMUM, TokenType.MODIFIER_MAXIMUM, TokenType.MODIFIER_EXPLODE,
-                    TokenType.MODIFIER_KEEP, TokenType.MODIFIER_DROP)) {
+            while (match(
+                    TokenType.MODIFIER_MINIMUM,
+                    TokenType.MODIFIER_MAXIMUM,
+                    TokenType.MODIFIER_EXPLODE,
+                    TokenType.MODIFIER_REROLL,
+                    TokenType.MODIFIER_REROLL_ONCE,
+                    TokenType.MODIFIER_KEEP,
+                    TokenType.MODIFIER_DROP)) {
                 Token mod = previous();
 
-                if (!match(TokenType.SELECTOR_HIGHEST, TokenType.SELECTOR_LOWEST, TokenType.SELECTOR_GREATER_THAN,
-                        TokenType.SELECTOR_LESS_THAN, TokenType.SELECTOR_LITERAL))
+                if (!match(
+                        TokenType.SELECTOR_HIGHEST,
+                        TokenType.SELECTOR_LOWEST,
+                        TokenType.SELECTOR_GREATER_THAN,
+                        TokenType.SELECTOR_LESS_THAN,
+                        TokenType.SELECTOR_LITERAL))
                     throw new Exception("Expected selector after modifier");
 
                 Token selector = previous();

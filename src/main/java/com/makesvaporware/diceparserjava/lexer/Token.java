@@ -20,6 +20,8 @@ public class Token {
         MODIFIER_MINIMUM,       // mi
         MODIFIER_MAXIMUM,       // ma
         MODIFIER_EXPLODE,       // e
+        MODIFIER_REROLL,        // rr
+        MODIFIER_REROLL_ONCE,   // ro
         MODIFIER_KEEP,          // k
         MODIFIER_DROP,          // p
 
@@ -28,7 +30,7 @@ public class Token {
         SELECTOR_LOWEST,        // l
         SELECTOR_GREATER_THAN,  // >
         SELECTOR_LESS_THAN,     // <
-        SELECTOR_LITERAL,       // ("", literal)
+        SELECTOR_LITERAL,       // no symbol, implicit literal
 
         // Literals
         INTEGER_LITERAL,        // e.g. 1
@@ -81,6 +83,10 @@ public class Token {
                 return "ma";
             case MODIFIER_EXPLODE:
                 return "e";
+            case MODIFIER_REROLL:
+                return "rr";
+            case MODIFIER_REROLL_ONCE:
+                return "ro";
             case MODIFIER_KEEP:
                 return "k";
             case MODIFIER_DROP:
