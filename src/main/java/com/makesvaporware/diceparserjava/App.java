@@ -31,25 +31,23 @@ public class App {
                     ----------------------------------------------------------------
 
                     MODIFIERS:
+                      mi[X]         - Minimum. Set rolls below X to X. (e.g. 2d6mi3)
+                      ma[X]         - Maximum. Set rolls above X to X. (e.g. 2d6ma5)
+                      e[X]          - Explode. Roll an additional die when you match the selector. (e.g. 2d6e6)
+                      k[X]          - Keep. Keeps all dice that match the selector. (e.g. 10d6k3)
+                      p[X]          - Drop. Drops all dice that match the selector. (e.g. 10d6p1)
 
-                    - VALUE MODIFIERS:
-                        miX         - Minimum. Set rolls below X to X. (e.g. 2d6mi3)
-                        maX         - Maximum. Set rolls above X to X. (e.g. 2d6ma5)
-                        eX          - Explode. Roll an additional die when you roll X (e.g. 2d6e6)
+                    Most modifiers can be paired with any one of the selectors below.
+                    Minimum and maximum modifiers only work with literal selectors.
 
-                    - KEEP MODIFIERS:
-                        khX         - Keep highest X dice (e.g. 4d6kh3)
-                        klX         - Keep lowest X dice (e.g. 1d20kl1)
-                        k>X         - Keep all dice greater than X (e.g. 6d6k>2)
-                        k<X         - Keep all dice less than X (e.g. 3d20k<15)
-                        kX          - Keep all dice literally matching X (e.g. 10d6k3)
+                    ----------------------------------------------------------------
 
-                    - DROP MODIFIERS:
-                        phX         - Drop highest X dice (e.g. 2d8ph3)
-                        plX         - Drop lowest X dice (e.g. 4d10pl2)
-                        p>X         - Drop all dice greater than X (e.g. 4d6p>5)
-                        p<X         - Drop all dice less than X (e.g. 5d10p<8)
-                        pX          - Drop all dice literally matching X (e.g. 10d6p1)
+                    SELECTORS:
+                      hX            - Act on highest X rolls. (e.g. 4d6kh3)
+                      lX            - Act on lowest X rolls. (e.g. 1d20kl1)
+                      >X            - Act on rolls more than X. (e.g. 6d6k>2)
+                      <X            - Act on rolls less than X. (e.g. 3d20k<15)
+                      X             - Act on rolls literally matching X. (e.g. 10d6k3)
 
                     ----------------------------------------------------------------
 
