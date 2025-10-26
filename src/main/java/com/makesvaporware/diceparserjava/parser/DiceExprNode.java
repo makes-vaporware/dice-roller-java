@@ -251,7 +251,7 @@ public class DiceExprNode extends ASTNode {
                     for (DieRoll roll : rolls) {
                         newRolls.add(roll);
                         if (roll.kept) {
-                            while (shouldReroll(modifier, oldSortedKeptRolls, roll)) {
+                            if (shouldReroll(modifier, oldSortedKeptRolls, roll)) {
                                 roll.discard();
 
                                 if (newRolls.size() > MAX_DICE_ROLLS)
